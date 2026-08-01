@@ -6,7 +6,7 @@ export default function LoginPage() {
   return (
     <AuthCard
       title="Masuk ke Akun"
-      description="Pilih peran & masukkan kredensial terdaftar Anda"
+      description="Masukkan email dan kata sandi terdaftar Anda"
       footer={
         <p className="text-xs text-slate-500">
           Memiliki kendala akses? Hubungi Tim IT Administrator.
