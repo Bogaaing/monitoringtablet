@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatCard } from "@/components/shared/stat-card";
+import { StatGradientCard } from "@/components/dashboard/stat-gradient-card";
+import { GlassCard } from "@/components/dashboard/glass-card";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { dashboardService, ManagerDashboardStats } from "@/services/dashboard.service";
@@ -21,7 +21,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Clock, CheckCircle2, XCircle, ArrowRight, Activity, MapPin, Layers } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, ArrowRight, Activity, MapPin, Layers, Sparkles, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function ManagerDashboardPage() {
@@ -37,62 +37,99 @@ export default function ManagerDashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Executive Hero Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-8 text-white shadow-2xl border border-slate-800">
+        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-gradient-to-br from-amber-500/20 to-indigo-500/0 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+              <Sparkles className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+              <span>Manager Operations Dashboard</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+              Review & Persetujuan Inspeksi
+            </h1>
+            <p className="text-sm text-slate-300 max-w-xl">
+              Pantau antrean persetujuan pengujian tablet dari seluruh Kepala Regu (PIC) dan verifikasi kelayakan perangkat.
+            </p>
+          </div>
+
+          <Link href="/manager/approvals" className="relative z-10 shrink-0">
+            <Button
+              size="lg"
+              className="gap-3 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-extrabold px-7 py-6 rounded-2xl shadow-xl hover:scale-105 transition-all text-sm border border-white/20"
+            >
+              <ShieldCheck className="h-5 w-5" />
+              <span>Buka Menu Approval ({stats?.waitingApprovalCount || 0})</span>
+            </Button>
+          </Link>
+        </div>
+      </div>
+
       <PageHeader
-        title="Manager Approval & Operations Dashboard"
-        description="Pantau progres inspeksi tablet per lokasi, antrean persetujuan, dan statistik kelayakan perangkat."
+        title="Ringkasan Operasional & Approval"
+        description="Analisis grafik progres inspeksi per lokasi area dan distribusi status pengajuan."
       />
 
-      {/* Metric Cards Grid */}
+      {/* 4 Stat Gradient Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
+        <StatGradientCard
           title="Waiting Approval"
           value={loading ? "..." : stats?.waitingApprovalCount || 0}
           description="Antrean perlu review"
           icon={Clock}
-          iconColor="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50"
+          gradient="amber"
+          badgeText="Perlu Action"
         />
 
-        <StatCard
+        <StatGradientCard
           title="Approved"
           value={loading ? "..." : stats?.approvedCount || 0}
           description="Telah disetujui"
           icon={CheckCircle2}
-          iconColor="text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50"
+          gradient="emerald"
+          badgeText="Disetujui"
         />
 
-        <StatCard
+        <StatGradientCard
           title="Rejected"
           value={loading ? "..." : stats?.rejectedCount || 0}
           description="Ditolak / Perlu perbaikan"
           icon={XCircle}
-          iconColor="text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50"
+          gradient="rose"
+          badgeText="Ditolak"
         />
 
-        <StatCard
+        <StatGradientCard
           title="Total Submitted"
           value={loading ? "..." : stats?.totalSubmittedCount || 0}
           description="Inspeksi dikirimkan"
           icon={Activity}
-          iconColor="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50"
+          gradient="indigo"
+          badgeText="Total Input"
         />
       </div>
 
-      {/* Recharts Data Visualization Grid */}
+      {/* Recharts 3 Visualizations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Progress by Location Bar Chart */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-indigo-600" />
-              <span>Progress by Location (Progres per Lokasi)</span>
-            </CardTitle>
-            <CardDescription>
-              Jumlah tablet yang telah disetujui (Completed) vs Menunggu (Pending) per lokasi area
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-[320px] pt-4">
+        <GlassCard className="lg:col-span-2 p-6" glowColor="indigo">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                <span>Progress by Location (Progres per Lokasi)</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Jumlah tablet yang telah disetujui (Completed) vs Menunggu (Pending) per lokasi area
+              </p>
+            </div>
+          </div>
+
+          <div className="h-[300px] pt-2">
             {loading ? (
-              <div className="h-full flex items-center justify-center text-slate-400">
+              <div className="h-full flex items-center justify-center text-slate-400 text-xs">
                 Memuat grafik lokasi...
               </div>
             ) : (
@@ -101,16 +138,16 @@ export default function ManagerDashboardPage() {
                   data={stats?.locationProgress || []}
                   margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                  <XAxis dataKey="locationName" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
+                  <XAxis dataKey="locationName" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#0f172a",
                       color: "#fff",
-                      borderRadius: "12px",
+                      borderRadius: "14px",
                       border: "none",
-                      boxShadow: "0 10px 15px -3px rgba(0,0,0,0.3)",
+                      boxShadow: "0 10px 25px -5px rgba(0,0,0,0.3)",
                     }}
                   />
                   <Legend />
@@ -119,21 +156,22 @@ export default function ManagerDashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </GlassCard>
 
-        {/* Approval Status Pie Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Layers className="h-5 w-5 text-indigo-600" />
+        {/* Status Proportion Pie Chart */}
+        <GlassCard className="p-6 flex flex-col justify-between" glowColor="amber">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-4 mb-2">
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Layers className="h-5 w-5 text-amber-500" />
               <span>Status Distribution</span>
-            </CardTitle>
-            <CardDescription>Proporsi status review inspeksi</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[320px] flex flex-col items-center justify-center">
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Proporsi status review inspeksi</p>
+          </div>
+
+          <div className="h-[280px] flex items-center justify-center">
             {loading ? (
-              <div className="text-slate-400">Memuat distribusi status...</div>
+              <div className="text-slate-400 text-xs">Memuat distribusi status...</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -141,9 +179,9 @@ export default function ManagerDashboardPage() {
                     data={stats?.statusDistribution || []}
                     cx="50%"
                     cy="45%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={4}
+                    innerRadius={55}
+                    outerRadius={85}
+                    paddingAngle={5}
                     dataKey="value"
                   >
                     {(stats?.statusDistribution || []).map((entry, index) => (
@@ -155,31 +193,39 @@ export default function ManagerDashboardPage() {
                       backgroundColor: "#0f172a",
                       color: "#fff",
                       borderRadius: "12px",
+                      border: "none",
                     }}
                   />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </GlassCard>
       </div>
 
-      {/* Recent Activity Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+      {/* Recent Activity Feed */}
+      <GlassCard className="p-6" glowColor="indigo">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
           <div>
-            <CardTitle className="text-base">Antrean Approval & Aktivitas Terbaru</CardTitle>
-            <CardDescription>Inspeksi terkini yang membutuhkan tindakan persetujuan Manager</CardDescription>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-500" />
+              <span>Antrean Approval & Aktivitas Terbaru</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Inspeksi terkini yang membutuhkan tindakan persetujuan Manager
+            </p>
           </div>
+
           <Link href="/manager/approvals">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-indigo-600">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-indigo-600 hover:bg-indigo-50">
               <span>Buka Menu Approval</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </Link>
-        </CardHeader>
-        <CardContent className="p-0">
+        </div>
+
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -206,11 +252,11 @@ export default function ManagerDashboardPage() {
                 </TableRow>
               ) : (
                 stats.recentInspections.map((ins) => (
-                  <TableRow key={ins.id}>
-                    <TableCell className="font-mono font-bold text-indigo-600">
+                  <TableRow key={ins.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                    <TableCell className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
                       {ins.tablet?.qr_code || "QR-TAB-001"}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm font-semibold">
                       {ins.pic?.name || "Ahmad Rizky (PIC)"}
                     </TableCell>
                     <TableCell className="text-xs text-slate-600 dark:text-slate-400">
@@ -229,7 +275,7 @@ export default function ManagerDashboardPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Link href="/manager/approvals">
-                        <Button size="sm" variant="outline" className="text-xs gap-1 text-indigo-600">
+                        <Button size="sm" variant="outline" className="text-xs gap-1 text-indigo-600 hover:bg-indigo-50">
                           <span>Review</span>
                           <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
@@ -240,8 +286,8 @@ export default function ManagerDashboardPage() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </GlassCard>
     </div>
   );
 }
