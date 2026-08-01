@@ -24,31 +24,29 @@ export default function PicDashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Interactive Glowing Scan Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-950 p-8 text-white shadow-2xl border border-indigo-900/50">
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-gradient-to-br from-indigo-500/20 to-emerald-500/0 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+      {/* Clean Solid Scan Hero Banner */}
+      <div className="rounded-3xl bg-slate-900 p-8 text-white shadow-xl border border-slate-800">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-400 animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-950 border border-indigo-800 text-indigo-400 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
               <span>Dashboard Kepala Regu (PIC)</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
               Siap Inspeksi Tablet Hari Ini?
             </h1>
-            <p className="text-sm text-slate-300 max-w-lg">
+            <p className="text-sm text-slate-400 max-w-lg">
               Pindai QR Code pada fisik tablet menggunakan kamera perangkat Anda untuk mengisi formulir inspeksi bulanan.
             </p>
           </div>
 
-          {/* Prominent Glowing Scan Button */}
-          <Link href="/pic/scan" className="relative z-10 shrink-0">
+          {/* Solid Action Button */}
+          <Link href="/pic/scan" className="shrink-0">
             <Button
               size="lg"
-              className="gap-3.5 bg-gradient-to-r from-indigo-500 via-purple-600 to-emerald-500 hover:from-indigo-600 hover:to-emerald-600 text-white font-extrabold px-8 py-7 rounded-2xl shadow-xl hover:shadow-indigo-500/30 hover:scale-105 transition-all text-base border border-white/20"
+              className="gap-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-8 py-7 rounded-2xl shadow-lg transition-all text-base"
             >
-              <QrCode className="h-6 w-6 animate-pulse" />
+              <QrCode className="h-6 w-6" />
               <span>Scan QR Code Tablet</span>
             </Button>
           </Link>
@@ -60,7 +58,7 @@ export default function PicDashboardPage() {
         description="Pantau status unit tablet yang ditugaskan pada area operasional Anda."
       />
 
-      {/* 3 Stat Gradient Cards */}
+      {/* 3 Solid Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <StatGradientCard
           title="Assigned Tablets"

@@ -37,28 +37,26 @@ export default function ManagerDashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Executive Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-8 text-white shadow-2xl border border-slate-800">
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-gradient-to-br from-amber-500/20 to-indigo-500/0 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      {/* Clean Solid Hero Banner */}
+      <div className="rounded-3xl bg-slate-900 p-8 text-white shadow-xl border border-slate-800">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-              <Sparkles className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950 border border-amber-800 text-amber-400 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
               <span>Manager Operations Dashboard</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
               Review & Persetujuan Inspeksi
             </h1>
-            <p className="text-sm text-slate-300 max-w-xl">
+            <p className="text-sm text-slate-400 max-w-xl">
               Pantau antrean persetujuan pengujian tablet dari seluruh Kepala Regu (PIC) dan verifikasi kelayakan perangkat.
             </p>
           </div>
 
-          <Link href="/manager/approvals" className="relative z-10 shrink-0">
+          <Link href="/manager/approvals" className="shrink-0">
             <Button
               size="lg"
-              className="gap-3 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-extrabold px-7 py-6 rounded-2xl shadow-xl hover:scale-105 transition-all text-sm border border-white/20"
+              className="gap-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-7 py-6 rounded-2xl shadow-lg transition-all text-sm"
             >
               <ShieldCheck className="h-5 w-5" />
               <span>Buka Menu Approval ({stats?.waitingApprovalCount || 0})</span>
@@ -72,7 +70,7 @@ export default function ManagerDashboardPage() {
         description="Analisis grafik progres inspeksi per lokasi area dan distribusi status pengajuan."
       />
 
-      {/* 4 Stat Gradient Cards */}
+      {/* 4 Solid Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatGradientCard
           title="Waiting Approval"
