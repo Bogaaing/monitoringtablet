@@ -27,8 +27,10 @@ import Link from "next/link";
 export default function ManagerDashboardPage() {
   const [stats, setStats] = useState<ManagerDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     dashboardService.getManagerStats().then((res) => {
       setStats(res);
       setLoading(false);
@@ -126,7 +128,7 @@ export default function ManagerDashboardPage() {
           </div>
 
           <div className="h-[300px] pt-2">
-            {loading ? (
+            {!mounted || loading ? (
               <div className="h-full flex items-center justify-center text-slate-400 text-xs">
                 Memuat grafik lokasi...
               </div>
@@ -168,7 +170,7 @@ export default function ManagerDashboardPage() {
           </div>
 
           <div className="h-[280px] flex items-center justify-center">
-            {loading ? (
+            {!mounted || loading ? (
               <div className="text-slate-400 text-xs">Memuat distribusi status...</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">

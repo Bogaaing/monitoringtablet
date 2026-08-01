@@ -4,8 +4,6 @@ import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatGradientCard } from "@/components/dashboard/stat-gradient-card";
 import { GlassCard } from "@/components/dashboard/glass-card";
-import { CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { dashboardService, AdminDashboardStats } from "@/services/dashboard.service";
 import {
   BarChart,
@@ -25,22 +23,22 @@ import {
   Users,
   MapPin,
   AlertTriangle,
-  CheckCircle2,
-  ArrowRight,
-  Shield,
   Activity,
   Calendar,
   Sparkles,
   Zap,
   ChevronRight,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     dashboardService.getAdminStats().then((res) => {
       setStats(res);
       setLoading(false);
@@ -132,9 +130,9 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      {/* Recharts 3 Visualizations Grid */}
+      {/* Visualizations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Inspection Progress Bar Chart */}
+        {/* Inspection Progress Card */}
         <GlassCard className="lg:col-span-2 p-6" glowColor="indigo">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
             <div>
@@ -152,7 +150,6 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="space-y-6">
-            {/* Solid Clean Progress Bar */}
             <div className="space-y-2">
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-4 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
                 <div
@@ -166,7 +163,6 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Sub-Metrics Summary Box */}
             <div className="grid grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center">
               <div>
                 <span className="text-xs text-slate-500 block font-medium">Total Tablet</span>
@@ -201,7 +197,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="h-[220px] flex items-center justify-center">
-            {loading ? (
+            {!mounted || loading ? (
               <div className="text-slate-400 text-xs">Memuat grafik...</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">

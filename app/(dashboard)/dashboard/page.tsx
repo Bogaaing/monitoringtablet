@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import { Role } from "@/types";
 import { authService } from "@/services/auth.service";
 
-export default async function DashboardPage() {
-  const cookieStore = await cookies();
+export default function DashboardPage() {
+  const cookieStore = cookies();
   const demoRole = (cookieStore.get("demo_role")?.value as Role) || "admin";
 
   // Redirect to assigned role dashboard
