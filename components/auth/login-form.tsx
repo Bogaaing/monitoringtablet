@@ -30,7 +30,7 @@ export function LoginForm() {
       const result = await authService.signIn(email, password);
 
       if (result.error) {
-        setErrorMsg("Email atau kata sandi tidak valid. Silakan periksa kembali.");
+        setErrorMsg(result.error);
       } else if (result.redirectUrl) {
         router.push(result.redirectUrl);
         router.refresh();
@@ -119,15 +119,42 @@ export function LoginForm() {
         )}
       </Button>
 
-      {/* Subtle Account Hints for Demo Testing */}
-      <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-500 text-center space-y-1">
-        <span className="font-medium">Akun Demo Sistem (Otomatis Deteksi Peran):</span>
-        <div className="flex justify-center gap-2 font-mono text-[10px] text-indigo-600 font-bold">
-          <button type="button" onClick={() => { setEmail("admin@monitoring.com"); setPassword("password123"); }} className="hover:underline">admin@monitoring.com</button>
-          <span className="text-slate-300">•</span>
-          <button type="button" onClick={() => { setEmail("pic@monitoring.com"); setPassword("password123"); }} className="hover:underline">pic@monitoring.com</button>
-          <span className="text-slate-300">•</span>
-          <button type="button" onClick={() => { setEmail("manager@monitoring.com"); setPassword("password123"); }} className="hover:underline">manager@monitoring.com</button>
+      {/* Quick Demo Credentials Autofill Hints */}
+      <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-500 text-center space-y-1.5">
+        <span className="font-semibold block">Klik untuk Mengisi Akun Demo (Otomatis Deteksi Peran):</span>
+        <div className="flex flex-wrap justify-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("admin@monitoring.com");
+              setPassword("admin123");
+            }}
+            className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
+          >
+            Admin (admin@monitoring.com)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("pic@monitoring.com");
+              setPassword("pic123");
+            }}
+            className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
+          >
+            PIC (pic@monitoring.com)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("manager@monitoring.com");
+              setPassword("manager123");
+            }}
+            className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
+          >
+            Manager (manager@monitoring.com)
+          </button>
         </div>
       </div>
     </form>
