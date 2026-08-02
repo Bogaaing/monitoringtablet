@@ -16,10 +16,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   MapPin,
-  Tablet as TabletIcon,
   ArrowRight,
   Loader2,
-  X,
 } from "lucide-react";
 
 interface QRScannerProps {
@@ -34,7 +32,6 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [zoomLevel, setZoomLevel] = useState<"1x" | "2x">("1x");
 
-  // State for result bottom sheet
   const [scanStatus, setScanStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [detectedTablet, setDetectedTablet] = useState<Tablet | null>(null);
   const [detectedCode, setDetectedCode] = useState<string>("");
@@ -43,7 +40,7 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const isStartedRef = useRef<boolean>(false);
 
-  // Initialize camera scanner cleanly without library UI
+  // ── Camera lifecycle ──────────────────────────────────────────────
   useEffect(() => {
     if (mode !== "camera") {
       stopCamera();
@@ -57,7 +54,6 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
         const element = document.getElementById("qr-reader-video");
         if (!element) return;
 
-        // Cleanup previous instance if any
         if (html5QrCodeRef.current && isStartedRef.current) {
           await html5QrCodeRef.current.stop().catch(() => {});
           isStartedRef.current = false;
@@ -68,11 +64,7 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
 
         await qrScanner.start(
           { facingMode },
-          {
-            fps: 15,
-            qrbox: { width: 260, height: 260 },
-            aspectRatio: 1.0,
-          },
+          { fps: 15, qrbox: { width: 260, height: 260 }, aspectRatio: 1.0 },
           async (decodedText) => {
             if (!isMounted) return;
             let cleanQr = decodedText;
@@ -80,11 +72,9 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
               const parsed = JSON.parse(decodedText);
               if (parsed.qr_code) cleanQr = parsed.qr_code;
             } catch (e) {}
-
-            // Trigger detection workflow
             handleCodeDetected(cleanQr);
           },
-          () => {} // Silent scan error
+          () => {}
         );
 
         isStartedRef.current = true;
@@ -111,17 +101,14 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
     }
   };
 
+  // ── QR code detection handler ─────────────────────────────────────
   const handleCodeDetected = async (code: string) => {
     if (scanStatus === "loading") return;
-
-    // Pause camera scan
     stopCamera();
     setDetectedCode(code);
     setScanStatus("loading");
 
-    // 1-second simulated/real loading delay for smooth enterprise experience
     const startTime = Date.now();
-
     try {
       const tablet = await tabletsService.getTabletByQr(code);
       const elapsed = Date.now() - startTime;
@@ -142,6 +129,7 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
     }
   };
 
+  // ── Camera controls ───────────────────────────────────────────────
   const toggleTorch = async () => {
     if (!html5QrCodeRef.current || !isStartedRef.current) return;
     try {
@@ -155,21 +143,19 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
     }
   };
 
-  const toggleCamera = () => {
+  const toggleCamera = () =>
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
-  };
 
-  const toggleZoom = () => {
+  const toggleZoom = () =>
     setZoomLevel((prev) => (prev === "1x" ? "2x" : "1x"));
-  };
 
+  // ── Manual input ──────────────────────────────────────────────────
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (manualInput.trim()) {
-      handleCodeDetected(manualInput.trim());
-    }
+    if (manualInput.trim()) handleCodeDetected(manualInput.trim());
   };
 
+  // ── Reset / confirm ───────────────────────────────────────────────
   const resetScan = () => {
     setScanStatus("idle");
     setDetectedTablet(null);
@@ -179,26 +165,35 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
   };
 
   const confirmStartInspection = () => {
-    if (detectedCode) {
-      onScanSuccess(detectedCode, detectedTablet || undefined);
-    }
+    if (detectedCode) onScanSuccess(detectedCode, detectedTablet || undefined);
   };
 
-  const cornerColorClass =
-    scanStatus === "success"
-      ? "border-emerald-500 shadow-[0_0_20px_#10B981]"
-      : "border-[#6C5CE7] shadow-[0_0_12px_#6C5CE7]";
+  // ── Corner color (purple idle → green on success) ─────────────────
+  const isSuccess = scanStatus === "success";
+  const cornerColor = isSuccess ? "#10B981" : "#6C5CE7";
+  const cornerGlow = isSuccess
+    ? "0 0 20px #10B981, 0 0 8px #10B981"
+    : "0 0 12px #6C5CE7, 0 0 6px #6C5CE7";
 
+  // ── Corner style factory ──────────────────────────────────────────
+  const cornerBase: React.CSSProperties = {
+    position: "absolute",
+    width: 32,
+    height: 32,
+    borderColor: cornerColor,
+    boxShadow: cornerGlow,
+    transition: "border-color 0.3s, box-shadow 0.3s",
+  };
+
+  // ── Render ────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col items-center w-full max-w-[430px] mx-auto space-y-4">
-      {/* ── 1. SEGMENTED TABS MODE ── */}
+
+      {/* ══ 1. MODE SELECTOR TABS ══════════════════════════════════ */}
       <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-full border border-slate-200 dark:border-slate-700">
         <button
           type="button"
-          onClick={() => {
-            resetScan();
-            setMode("camera");
-          }}
+          onClick={() => { resetScan(); setMode("camera"); }}
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
             mode === "camera"
               ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
@@ -223,74 +218,168 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
         </button>
       </div>
 
-      {/* ── 2. CAMERA SCANNER MODE ── */}
+      {/* ══ 2. CAMERA SCANNER MODE ═════════════════════════════════ */}
       {mode === "camera" && (
         <div className="w-full space-y-3">
-          {/* Viewfinder Container (Square aspect ratio, 100% width) */}
-          <div className="relative w-full aspect-square rounded-3xl overflow-hidden bg-black shadow-2xl border-0">
-            {/* Video Stream Target */}
+          {/*
+           * VIEWFINDER WRAPPER
+           * ─────────────────
+           * • Square 1:1 ratio, fills available width
+           * • position:relative → all overlay layers use absolute positioning
+           * • NO overflow:hidden → the scan frame must NOT be clipped
+           * • bg-black fills behind the video stream
+           */}
+          <div
+            className="relative w-full aspect-square rounded-3xl bg-black shadow-2xl"
+            style={{ isolation: "isolate" }}
+          >
+            {/* ── Layer 1 · Camera video stream (Html5Qrcode target) ── */}
             <div
               id="qr-reader-video"
-              className={`w-full h-full object-cover transition-transform duration-300 ${
+              className={`absolute inset-0 rounded-3xl overflow-hidden transition-transform duration-300 ${
                 zoomLevel === "2x" ? "scale-125" : "scale-100"
               }`}
             />
 
-            {/* Dark Shading Overlay */}
-            <div className="absolute inset-0 bg-slate-950/40 pointer-events-none z-10" />
+            {/* ── Layer 2 · Dark vignette ── */}
+            <div className="absolute inset-0 rounded-3xl bg-slate-950/40 pointer-events-none z-10" />
 
-            {/* Top Instruction Banner (Absolute Top Centered) */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none w-auto max-w-[90%] text-center">
-              <div className="px-3.5 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md text-white text-[11px] font-bold border border-white/10 shadow-lg truncate">
-                {scanStatus === "success"
+            {/* ── Layer 3 · Top instruction pill ── */}
+            <div className="absolute top-4 left-0 right-0 flex justify-center z-30 pointer-events-none">
+              <div className="px-4 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md text-white text-[11px] font-bold border border-white/10 shadow-lg">
+                {isSuccess
                   ? "✓ QR Code berhasil ditemukan"
-                  : "Arahkan QR Code ke dalam kotak untuk memulai pemindaian."}
+                  : "Arahkan QR Code ke dalam kotak."}
               </div>
             </div>
 
-            {/* PERFECTLY CENTERED 260x260 SCAN FRAME (Absolute 50% x 50% Center) */}
+            {/*
+             * ══ Layer 4 · SCAN FRAME (single unified container) ══
+             *
+             * ONE parent div centered with:
+             *   position: absolute
+             *   top: 50%
+             *   left: 50%
+             *   transform: translate(-50%, -50%)
+             *
+             * ┌───────────────────────────────┐
+             * │  ScanFrame 260 × 260 px       │
+             * │                               │
+             * │  ┌──┐               ┌──┐     │
+             * │  │TL│               │TR│     │
+             * │                               │
+             * │        [scan line]            │
+             * │                               │
+             * │  └──┘               └──┘     │
+             * │  │BL│               │BR│     │
+             * └───────────────────────────────┘
+             *
+             * All four corners: position relative to THIS container.
+             * Scan line:        child of THIS container.
+             * NOTHING floats independently outside this box.
+             */}
             <motion.div
               animate={
-                scanStatus === "success"
-                  ? { scale: [1, 1.15, 1] }
-                  : { scale: [1, 1.08, 1] }
+                isSuccess
+                  ? { scale: [1, 1.12, 1] }
+                  : { scale: [1, 1.05, 1] }
               }
               transition={
-                scanStatus === "success"
-                  ? { duration: 0.3 }
-                  : {
-                      duration: 1.5,
-                      repeat: Infinity,
-                      repeatType: "reverse",
-                      ease: "easeInOut",
-                    }
+                isSuccess
+                  ? { duration: 0.35 }
+                  : { duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
               }
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[260px] h-[260px] z-20 pointer-events-none flex items-center justify-center overflow-hidden"
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: 260,
+                height: 260,
+                zIndex: 20,
+                pointerEvents: "none",
+              }}
             >
-              {/* 4 Purple Corner Markers (32px length, 4px stroke, 16px radius) */}
+              {/* ┌── TOP LEFT ── */}
               <div
-                className={`absolute top-0 left-0 w-[32px] h-[32px] border-t-[4px] border-l-[4px] rounded-tl-[16px] transition-all duration-300 ${cornerColorClass}`}
-              />
-              <div
-                className={`absolute top-0 right-0 w-[32px] h-[32px] border-t-[4px] border-r-[4px] rounded-tr-[16px] transition-all duration-300 ${cornerColorClass}`}
-              />
-              <div
-                className={`absolute bottom-0 left-0 w-[32px] h-[32px] border-b-[4px] border-l-[4px] rounded-bl-[16px] transition-all duration-300 ${cornerColorClass}`}
-              />
-              <div
-                className={`absolute bottom-0 right-0 w-[32px] h-[32px] border-b-[4px] border-r-[4px] rounded-br-[16px] transition-all duration-300 ${cornerColorClass}`}
+                style={{
+                  ...cornerBase,
+                  top: 0,
+                  left: 0,
+                  borderTopWidth: 4,
+                  borderLeftWidth: 4,
+                  borderBottomWidth: 0,
+                  borderRightWidth: 0,
+                  borderTopLeftRadius: 16,
+                }}
               />
 
-              {/* Continuous Moving Scan Line (80% width, bounded inside 260x260 frame) */}
-              {scanStatus !== "success" && (
+              {/* TOP RIGHT ──┐ */}
+              <div
+                style={{
+                  ...cornerBase,
+                  top: 0,
+                  right: 0,
+                  borderTopWidth: 4,
+                  borderRightWidth: 4,
+                  borderBottomWidth: 0,
+                  borderLeftWidth: 0,
+                  borderTopRightRadius: 16,
+                }}
+              />
+
+              {/* └── BOTTOM LEFT ── */}
+              <div
+                style={{
+                  ...cornerBase,
+                  bottom: 0,
+                  left: 0,
+                  borderBottomWidth: 4,
+                  borderLeftWidth: 4,
+                  borderTopWidth: 0,
+                  borderRightWidth: 0,
+                  borderBottomLeftRadius: 16,
+                }}
+              />
+
+              {/* BOTTOM RIGHT ──┘ */}
+              <div
+                style={{
+                  ...cornerBase,
+                  bottom: 0,
+                  right: 0,
+                  borderBottomWidth: 4,
+                  borderRightWidth: 4,
+                  borderTopWidth: 0,
+                  borderLeftWidth: 0,
+                  borderBottomRightRadius: 16,
+                }}
+              />
+
+              {/*
+               * ANIMATED SCAN LINE
+               * ─────────────────
+               * position: absolute, inside the ScanFrame
+               * left: 10%, width: 80%  → 26px inset from each side
+               * top: 50% → vertical starting midpoint
+               * animate y: -110px (top edge) → +110px (bottom edge) → repeat
+               * Never exits the 260×260 parent.
+               */}
+              {!isSuccess && (
                 <motion.div
-                  className="absolute left-1/2 -translate-x-1/2 h-[2px] w-[80%] rounded-full opacity-90 pointer-events-none"
                   style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "10%",
+                    width: "80%",
+                    height: 2,
+                    borderRadius: 9999,
+                    opacity: 0.9,
                     background:
                       "linear-gradient(90deg, transparent 0%, #6C5CE7 35%, #60A5FA 50%, #6C5CE7 65%, transparent 100%)",
                     boxShadow: "0 0 15px #6C5CE7, 0 0 8px #60A5FA",
                   }}
-                  animate={{ y: [-110, 110, -110] }}
+                  animate={{ y: [-110, 110] }}
                   transition={{
                     duration: 2,
                     repeat: Infinity,
@@ -300,23 +389,30 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
                 />
               )}
 
-              {/* Success Banner Overlay inside Frame */}
-              {scanStatus === "success" && (
+              {/* SUCCESS BADGE — centered inside the frame */}
+              {isSuccess && (
                 <motion.div
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.3 }}
-                  className="flex flex-col items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-emerald-950/85 backdrop-blur-md border border-emerald-400/60 text-emerald-300 text-xs font-black shadow-xl z-30"
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                  }}
+                  className="flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-emerald-950/90 backdrop-blur-md border border-emerald-400/60 text-emerald-300 text-xs font-black shadow-xl"
                 >
                   <CheckCircle2 className="w-5 h-5 text-emerald-400 animate-bounce" />
                   <span>✓ QR Code Terdeteksi</span>
                 </motion.div>
               )}
             </motion.div>
+            {/* ══ End ScanFrame ══ */}
 
-            {/* Floating Camera Control Buttons (Absolute Bottom Bar) */}
-            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-auto z-20">
-              {/* Bottom Left: Flash Toggle */}
+            {/* ── Layer 5 · Camera control bar (Flash | Zoom | Switch) ── */}
+            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-30 pointer-events-auto">
+              {/* Bottom Left: Flash / Torch */}
               <button
                 type="button"
                 onClick={toggleTorch}
@@ -343,7 +439,7 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
               <button
                 type="button"
                 onClick={toggleCamera}
-                className="w-11 h-11 rounded-full bg-slate-900/70 backdrop-blur-md text-white border border-white/20 flex items-center justify-center hover:bg-slate-800 transition active:rotate-180 duration-300"
+                className="w-11 h-11 rounded-full bg-slate-900/70 backdrop-blur-md text-white border border-white/20 flex items-center justify-center hover:bg-slate-800 transition"
                 title="Ganti Kamera"
               >
                 <RefreshCw className="w-5 h-5" />
@@ -351,7 +447,7 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
             </div>
           </div>
 
-          {/* Quick Action: Switch to Manual Input */}
+          {/* Manual input shortcut */}
           <button
             type="button"
             onClick={() => setMode("manual")}
@@ -362,7 +458,7 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
         </div>
       )}
 
-      {/* ── 3. MANUAL INPUT MODE ── */}
+      {/* ══ 3. MANUAL INPUT MODE ═══════════════════════════════════ */}
       {mode === "manual" && (
         <form
           onSubmit={handleManualSubmit}
@@ -387,10 +483,10 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
             type="submit"
             className="w-full bg-[#473bf0] hover:bg-indigo-700 font-black text-xs h-12 rounded-xl shadow-md shadow-indigo-500/20"
           >
-            Proses & Periksa Tablet
+            Proses &amp; Periksa Tablet
           </Button>
 
-          {/* Sample Shortcut Pills */}
+          {/* Sample shortcut pills */}
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
             <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
               Contoh Kode Tablet Demo:
@@ -411,7 +507,7 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
         </form>
       )}
 
-      {/* ── 4. LOADING OVERLAY BOTTOM SHEET ── */}
+      {/* ══ 4. LOADING BOTTOM SHEET ════════════════════════════════ */}
       {scanStatus === "loading" && (
         <div className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in">
           <div className="w-full max-w-[430px] bg-white dark:bg-slate-900 rounded-t-3xl p-6 text-center space-y-4 border-t border-slate-200 dark:border-slate-700 shadow-2xl">
@@ -428,16 +524,14 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
         </div>
       )}
 
-      {/* ── 5. SUCCESS RESULT BOTTOM SHEET ── */}
+      {/* ══ 5. SUCCESS BOTTOM SHEET ════════════════════════════════ */}
       {scanStatus === "success" && detectedTablet && (
         <div className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in">
           <div className="w-full max-w-[430px] bg-white dark:bg-slate-900 rounded-t-3xl p-5 space-y-4 border-t border-slate-200 dark:border-slate-700 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-            {/* Handle Pill */}
             <div className="flex justify-center -mt-1">
               <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
             </div>
 
-            {/* Success Header */}
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center shrink-0 shadow-sm">
                 <CheckCircle2 className="w-7 h-7" />
@@ -452,7 +546,6 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
               </div>
             </div>
 
-            {/* Tablet Card Info */}
             <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
               <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2">
                 <span className="text-slate-500">Kode QR Tablet:</span>
@@ -460,14 +553,12 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
                   {detectedTablet.qr_code}
                 </span>
               </div>
-
               <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2">
-                <span className="text-slate-500">Model & Merk:</span>
+                <span className="text-slate-500">Model &amp; Merk:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">
                   {detectedTablet.brand} {detectedTablet.model}
                 </span>
               </div>
-
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Lokasi Penugasan:</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
@@ -477,7 +568,6 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
               </div>
             </div>
 
-            {/* Actions Grid */}
             <div className="flex gap-2.5 pt-1">
               <Button
                 type="button"
@@ -487,7 +577,6 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
               >
                 Scan Lagi
               </Button>
-
               <Button
                 type="button"
                 onClick={confirmStartInspection}
@@ -501,16 +590,14 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
         </div>
       )}
 
-      {/* ── 6. ERROR STATE BOTTOM SHEET ── */}
+      {/* ══ 6. ERROR BOTTOM SHEET ══════════════════════════════════ */}
       {scanStatus === "error" && (
         <div className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in">
           <div className="w-full max-w-[430px] bg-white dark:bg-slate-900 rounded-t-3xl p-5 space-y-4 border-t border-slate-200 dark:border-slate-700 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-            {/* Handle Pill */}
             <div className="flex justify-center -mt-1">
               <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
             </div>
 
-            {/* Error Header */}
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300 flex items-center justify-center shrink-0 shadow-sm">
                 <AlertTriangle className="w-7 h-7" />
@@ -525,7 +612,6 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
               </div>
             </div>
 
-            {/* Actions Grid */}
             <div className="flex gap-2.5 pt-1">
               <Button
                 type="button"
@@ -535,13 +621,9 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
               >
                 Scan Lagi
               </Button>
-
               <Button
                 type="button"
-                onClick={() => {
-                  setScanStatus("idle");
-                  setMode("manual");
-                }}
+                onClick={() => { setScanStatus("idle"); setMode("manual"); }}
                 className="flex-1 min-h-[48px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs"
               >
                 Input Manual
