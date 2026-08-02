@@ -157,12 +157,10 @@ export const authService = {
       }
     }
 
-    // Validate authentication: Either valid Supabase Auth user or valid password
-    const isValidDemoPass = password === "admin123" || password === "pic123" || password === "manager123" || password === "password123" || password.length >= 6;
-
-    if (authUser || isValidDemoPass) {
+    // Validate authentication: Either valid Supabase Auth user or any password entered
+    if (authUser || password.length > 0) {
       if (typeof document !== "undefined") {
-        document.cookie = `demo_role=${detectedRole}; path=/; max-age=86400`;
+        document.cookie = `demo_role=${detectedRole}; path=/; max-age=86400; SameSite=Lax`;
       }
 
       return {

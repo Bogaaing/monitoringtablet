@@ -34,8 +34,7 @@ export function LoginForm() {
       if (result.error) {
         setErrorMsg(result.error);
       } else if (result.redirectUrl) {
-        router.push(result.redirectUrl);
-        router.refresh();
+        window.location.href = result.redirectUrl;
       }
     } catch (err: any) {
       setErrorMsg("Terjadi kesalahan sistem saat menghubungi server.");
