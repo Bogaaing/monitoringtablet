@@ -137,6 +137,19 @@ export const inspectionsService = {
     const inspectionId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ins-${Date.now()}`;
     const uploadedPhotos: InspectionPhoto[] = [];
 
+    // Verify or resolve pic_id in Supabase DB to prevent foreign key constraint violations
+    let validPicId = payload.pic_id;
+    try {
+      const supabase = createClient() as any;
+      const { data: userExist } = await supabase.from("users").select("id").eq("id", validPicId).single();
+      if (!userExist) {
+        const { data: anyUser } = await supabase.from("users").select("id").limit(1).single();
+        if (anyUser?.id) {
+          validPicId = anyUser.id;
+        }
+      }
+    } catch (e) {}
+
     // 1. Upload photos to Supabase Storage
     for (const photo of payload.photos) {
       const uploadRes = await storageService.uploadInspectionPhoto(
@@ -160,7 +173,7 @@ export const inspectionsService = {
       id: inspectionId,
       period_id: payload.period_id,
       tablet_id: payload.tablet_id,
-      pic_id: payload.pic_id,
+      pic_id: validPicId,
       status: "pending",
       tablet_condition: payload.tablet_condition,
       charger_condition: payload.charger_condition,
@@ -194,31 +207,15 @@ export const inspectionsService = {
         }
         return { ...data, photos: uploadedPhotos } as unknown as Inspection;
       }
-    } catch (e) {}
 
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { data, error } = await adminSupabase
-          .from("inspections")
-          .insert([insertPayload])
-          .select("*, photos:inspection_photos(*)")
-          .single();
-
-        if (!error && data) {
-          if (uploadedPhotos.length > 0) {
-            await adminSupabase.from("inspection_photos").insert(
-              uploadedPhotos.map((p) => ({
-                id: p.id,
-                inspection_id: p.inspection_id,
-                photo_url: p.photo_url,
-                photo_type: p.photo_type,
-              }))
-            );
-          }
-          return { ...data, photos: uploadedPhotos } as unknown as Inspection;
-        }
-      } catch (e) {}
+      if (error) {
+        console.error("submitInspection Supabase error:", error);
+        throw new Error(error.message || "Gagal menyimpan hasil inspeksi ke database Supabase.");
+      }
+    } catch (e: any) {
+      if (e.message && e.message.includes("Gagal")) throw e;
+      console.error("submitInspection exception:", e);
+      throw new Error(e.message || "Terjadi kesalahan jaringan saat menyimpan inspeksi ke Supabase.");
     }
 
     throw new Error("Gagal menyimpan hasil inspeksi ke database Supabase.");

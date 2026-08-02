@@ -9,8 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { tabletsService } from "@/services/tablets.service";
 import { periodsService } from "@/services/periods.service";
+import { authService } from "@/services/auth.service";
 import { inspectionsService, Inspection } from "@/services/inspections.service";
-import { Tablet, InspectionPeriod } from "@/types";
+import { Tablet, InspectionPeriod, User } from "@/types";
 import {
   QrCode,
   CheckCircle2,
@@ -33,8 +34,11 @@ export default function PicScanPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
   useEffect(() => {
     periodsService.getActivePeriod().then((p) => setActivePeriod(p));
+    authService.getCurrentProfile().then((u) => setCurrentUser(u));
   }, []);
 
   const handleScanSuccess = async (qrCode: string) => {
@@ -82,24 +86,29 @@ export default function PicScanPage() {
   const handleFormSubmit = async (formData: any) => {
     if (!scannedTablet || !activePeriod) return;
 
-    await inspectionsService.submitInspection({
-      period_id: activePeriod.id,
-      tablet_id: scannedTablet.id,
-      pic_id: "20000000-0000-0000-0000-000000000002", // Demo PIC ID
-      tablet_condition: formData.tablet_condition,
-      charger_condition: formData.charger_condition,
-      case_condition: formData.case_condition,
-      battery_pct: formData.battery_pct,
-      notes: formData.notes,
-      gps_lat: formData.gps_lat,
-      gps_lng: formData.gps_lng,
-      photos: formData.photos,
-      tablet_code: scannedTablet.qr_code,
-      year: activePeriod.year,
-      month: activePeriod.month,
-    });
+    try {
+      await inspectionsService.submitInspection({
+        period_id: activePeriod.id,
+        tablet_id: scannedTablet.id,
+        pic_id: currentUser?.id || "user-pic-demo",
+        tablet_condition: formData.tablet_condition,
+        charger_condition: formData.charger_condition,
+        case_condition: formData.case_condition,
+        battery_pct: formData.battery_pct,
+        notes: formData.notes,
+        gps_lat: formData.gps_lat,
+        gps_lng: formData.gps_lng,
+        photos: formData.photos,
+        tablet_code: scannedTablet.qr_code,
+        year: activePeriod.year,
+        month: activePeriod.month,
+      });
 
-    setStep("success");
+      setStep("success");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Gagal menyimpan hasil inspeksi ke database Supabase.");
+      setStep("scan");
+    }
   };
 
   return (
