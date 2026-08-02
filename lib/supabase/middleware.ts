@@ -86,18 +86,13 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // 2. Demo mode reading cookie for protected dashboard routes
-    const demoRoleCookie = request.cookies.get("demo_role")?.value;
-
-    // If user is opening root / or /login without a real Supabase session, clear stale demo cookie
-    if (!isAuthenticated && (pathname === "/" || isAuthPage)) {
+    // 2. Demo mode cookie fallback
+    if (!isAuthenticated) {
+      const demoRoleCookie = request.cookies.get("demo_role")?.value;
       if (demoRoleCookie) {
-        response.cookies.delete("demo_role");
+        isAuthenticated = true;
+        userRole = demoRoleCookie;
       }
-    } else if (!isAuthenticated && demoRoleCookie) {
-      // Allow demo role session when navigating protected routes (/admin, /pic, /manager)
-      isAuthenticated = true;
-      userRole = demoRoleCookie;
     }
 
     const getRoleDashboard = (role: string) => {
@@ -109,25 +104,25 @@ export async function updateSession(request: NextRequest) {
         case "manager":
           return "/manager/dashboard";
         default:
-          return "/login";
+          return "/admin/dashboard";
       }
     };
 
     // Redirect unauthenticated users visiting protected routes to /login
-    if (!isAuthenticated && !isAuthPage && !pathname.startsWith("/_next") && !pathname.startsWith("/api")) {
+    if (!isAuthenticated && !isAuthPage && !pathname.startsWith("/_next") && !pathname.startsWith("/api") && pathname !== "/") {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
 
-    // Redirect authenticated users away from Auth pages to their assigned role dashboard
-    if (isAuthenticated && isAuthPage) {
+    // Redirect authenticated users away from Auth pages or root to their assigned role dashboard
+    if (isAuthenticated && (isAuthPage || pathname === "/")) {
       const url = request.nextUrl.clone();
       url.pathname = getRoleDashboard(userRole || "admin");
       return NextResponse.redirect(url);
     }
 
-    // Protect Role-Specific Routes
+    // Protect Role-Specific Routes for authenticated users
     if (isAuthenticated && userRole) {
       if (pathname.startsWith("/admin") && userRole !== "admin") {
         const url = request.nextUrl.clone();
