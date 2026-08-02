@@ -29,11 +29,21 @@ export default function PicInspectionsPage() {
     setLoading(true);
     try {
       const res = await inspectionsService.getInspections({
-        picId: currentUser?.id,
         status: statusFilter,
         limit: 100,
       });
-      setInspections(res.data);
+
+      if (res.data && res.data.length > 0 && currentUser) {
+        const myInspections = res.data.filter(
+          (i) =>
+            i.pic_id === currentUser.id ||
+            i.pic?.email?.toLowerCase() === currentUser.email?.toLowerCase() ||
+            (currentUser.location_id && i.tablet?.location_id === currentUser.location_id)
+        );
+        setInspections(myInspections.length > 0 ? myInspections : res.data);
+      } else {
+        setInspections(res.data);
+      }
     } catch (e) {
       console.error(e);
     } finally {
