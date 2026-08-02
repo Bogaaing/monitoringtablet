@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { PageHeader } from "@/components/shared/page-header";
 import { QRScanner } from "@/components/pic/qr-scanner";
 import { InspectionForm } from "@/components/pic/inspection-form";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -133,11 +132,7 @@ export default function PicScanPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      <PageHeader
-        title="Pemindaian QR & Inspeksi Tablet"
-        description="Pindai QR Code pada unit tablet untuk melakukan pengujian rutin bulanan."
-      />
+    <div className="space-y-4 max-w-4xl mx-auto">
 
       {errorMessage && (
         <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-sm font-semibold flex items-center justify-between animate-in fade-in">
