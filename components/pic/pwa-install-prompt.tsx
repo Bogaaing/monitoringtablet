@@ -68,7 +68,7 @@ export function PwaInstallPrompt() {
     if (globalPrompt) {
       setDeferredPrompt(globalPrompt);
       (window as any).__pwaPrompt = null; // consumed
-      setTimeout(() => setShowBanner(true), 1200);
+      setTimeout(() => setShowBanner(true), 300);
     }
 
     // ── 5. Also listen for future beforeinstallprompt events ────────
@@ -76,7 +76,7 @@ export function PwaInstallPrompt() {
       e.preventDefault();
       setDeferredPrompt(e);
       (window as any).__pwaPrompt = null;
-      setTimeout(() => setShowBanner(true), 1200);
+      setTimeout(() => setShowBanner(true), 300);
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
@@ -93,7 +93,7 @@ export function PwaInstallPrompt() {
 
     // ── 7. iOS Safari fallback: show manual guide after delay ───────
     if (isIOSSafari()) {
-      setTimeout(() => setShowIOSGuide(true), 2000);
+      setTimeout(() => setShowIOSGuide(true), 5000);
     }
 
     return () => {
