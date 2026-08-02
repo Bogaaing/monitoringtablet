@@ -6,6 +6,7 @@ import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar";
 import { PicMobileHeader } from "@/components/pic/mobile-header";
 import { PicBottomNav } from "@/components/pic/bottom-nav";
+import { PwaInstallPrompt } from "@/components/pic/pwa-install-prompt";
 import { authService } from "@/services/auth.service";
 import { useRouter } from "next/navigation";
 
@@ -35,13 +36,16 @@ export function DashboardShell({
         {/* Mobile PWA Container (Max Width 430px centered on larger screens) */}
         <div className="w-full max-w-[430px] min-h-screen bg-white dark:bg-slate-900 shadow-2xl border-x border-slate-200 dark:border-slate-800 flex flex-col relative pb-24">
           <PicMobileHeader user={user} activePeriod={activePeriod} />
-          
+
           <main className="flex-1 p-4 w-full">
             {children}
           </main>
 
           <PicBottomNav />
         </div>
+
+        {/* PWA Install Prompt — shows 1.5s after PIC enters the dashboard */}
+        <PwaInstallPrompt delay={1500} />
       </div>
     );
   }
