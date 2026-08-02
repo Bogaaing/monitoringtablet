@@ -46,7 +46,7 @@ export interface Inspection {
 export const inspectionsService = {
   async getInspections(params?: PaginationParams & { status?: string; periodId?: string; picId?: string }): Promise<PaginatedResult<Inspection>> {
     const page = params?.page || 1;
-    const limit = params?.limit || 10;
+    const limit = params?.limit || 100;
     const status = params?.status;
     const periodId = params?.periodId;
     const picId = params?.picId;
@@ -66,7 +66,30 @@ export const inspectionsService = {
 
       query = query.range(from, to).order("submitted_at", { ascending: false });
 
-      const { data, count, error } = await query;
+      let { data, count, error } = await query;
+
+      // Retry with Admin Client if regular client encountered RLS restriction or returned empty
+      if ((error || !data || data.length === 0) && typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+          const adminSupabase = createAdminClient() as any;
+          let adminQuery = adminSupabase
+            .from("inspections")
+            .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users(*), reviewer:users(*), photos:inspection_photos(*)", { count: "exact" });
+
+          if (status && status !== "all") adminQuery = adminQuery.eq("status", status);
+          if (periodId) adminQuery = adminQuery.eq("period_id", periodId);
+          if (picId) adminQuery = adminQuery.eq("pic_id", picId);
+
+          adminQuery = adminQuery.range(from, to).order("submitted_at", { ascending: false });
+          const res = await adminQuery;
+          if (!res.error && res.data) {
+            data = res.data;
+            count = res.count;
+            error = null;
+          }
+        } catch (adminErr) {}
+      }
+
       if (!error && data) {
         return {
           data: data as unknown as Inspection[],

@@ -56,7 +56,7 @@ export default function ManagerApprovalsPage() {
     try {
       const [inspRes, locList] = await Promise.all([
         inspectionsService.getInspections({
-          status: statusFilter,
+          status: "all",
           limit: 100,
         }),
         locationsService.getAllLocations(),
@@ -72,7 +72,7 @@ export default function ManagerApprovalsPage() {
 
   useEffect(() => {
     fetchApprovalData();
-  }, [statusFilter, locationFilter]);
+  }, []);
 
   // Metrics summary counts
   const pendingCount = inspections.filter((i) => i.status === "pending").length;
@@ -81,6 +81,9 @@ export default function ManagerApprovalsPage() {
   const totalCount = inspections.length;
 
   const filteredList = inspections.filter((ins) => {
+    // Status filter
+    if (statusFilter !== "all" && ins.status !== statusFilter) return false;
+
     // Location filter
     if (locationFilter !== "all" && ins.tablet?.location_id !== locationFilter) return false;
     
@@ -88,9 +91,10 @@ export default function ManagerApprovalsPage() {
     if (!search) return true;
     const s = search.toLowerCase();
     return (
-      ins.tablet?.qr_code.toLowerCase().includes(s) ||
+      ins.tablet?.qr_code?.toLowerCase().includes(s) ||
       (ins.pic?.name && ins.pic.name.toLowerCase().includes(s)) ||
-      (ins.tablet?.location?.name && ins.tablet.location.name.toLowerCase().includes(s))
+      (ins.tablet?.location?.name && ins.tablet.location.name.toLowerCase().includes(s)) ||
+      (ins.notes && ins.notes.toLowerCase().includes(s))
     );
   });
 
