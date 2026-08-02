@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { tabletsService } from "@/services/tablets.service";
@@ -183,6 +184,11 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
     }
   };
 
+  const cornerColorClass =
+    scanStatus === "success"
+      ? "border-emerald-500 shadow-[0_0_20px_#10B981]"
+      : "border-[#6C5CE7] shadow-[0_0_12px_#6C5CE7]";
+
   return (
     <div className="flex flex-col items-center w-full max-w-[430px] mx-auto space-y-4">
       {/* ── 1. SEGMENTED TABS MODE ── */}
@@ -222,7 +228,6 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
         <div className="w-full space-y-3">
           {/* Viewfinder Container */}
           <div className="relative w-full aspect-square rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center border-0">
-
             {/* Video Stream target (Clean Html5Qrcode instance) */}
             <div
               id="qr-reader-video"
@@ -233,23 +238,78 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
 
             {/* Semi-transparent Overlay */}
             <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between p-6 bg-slate-950/40">
-
               {/* Instruction Text */}
               <div className="px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-bold text-center border border-white/10 shadow-lg">
-                Arahkan QR Code ke dalam kotak untuk memulai pemindaian.
+                {scanStatus === "success"
+                  ? "✓ QR Code berhasil ditemukan"
+                  : "Arahkan QR Code ke dalam kotak untuk memulai pemindaian."}
               </div>
 
-              {/* Centered 260x260 Viewfinder Frame - The ONLY visible scanning frame */}
-              <div className="relative w-[240px] h-[240px] xs:w-[260px] xs:h-[260px] my-auto">
-                {/* 4 Purple Animated Corner Indicators (32px length, 4px stroke, 16px radius) */}
-                <div className="absolute top-0 left-0 w-[32px] h-[32px] border-t-[4px] border-l-[4px] border-[#473bf0] rounded-tl-[16px] shadow-[0_0_10px_#473bf0]" />
-                <div className="absolute top-0 right-0 w-[32px] h-[32px] border-t-[4px] border-r-[4px] border-[#473bf0] rounded-tr-[16px] shadow-[0_0_10px_#473bf0]" />
-                <div className="absolute bottom-0 left-0 w-[32px] h-[32px] border-b-[4px] border-l-[4px] border-[#473bf0] rounded-bl-[16px] shadow-[0_0_10px_#473bf0]" />
-                <div className="absolute bottom-0 right-0 w-[32px] h-[32px] border-b-[4px] border-r-[4px] border-[#473bf0] rounded-br-[16px] shadow-[0_0_10px_#473bf0]" />
+              {/* Centered 260x260 Viewfinder Frame with Framer Motion GPU Acceleration */}
+              <motion.div
+                animate={
+                  scanStatus === "success"
+                    ? { scale: [1, 1.15, 1] }
+                    : { scale: [1, 1.08, 1] }
+                }
+                transition={
+                  scanStatus === "success"
+                    ? { duration: 0.3 }
+                    : {
+                        duration: 1.5,
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                        ease: "easeInOut",
+                      }
+                }
+                className="relative w-[240px] h-[240px] xs:w-[260px] xs:h-[260px] my-auto flex items-center justify-center"
+              >
+                {/* 4 Corner Markers (32px length, 4px stroke, 16px radius, #6C5CE7) */}
+                <div
+                  className={`absolute top-0 left-0 w-[32px] h-[32px] border-t-[4px] border-l-[4px] rounded-tl-[16px] transition-all duration-300 ${cornerColorClass}`}
+                />
+                <div
+                  className={`absolute top-0 right-0 w-[32px] h-[32px] border-t-[4px] border-r-[4px] rounded-tr-[16px] transition-all duration-300 ${cornerColorClass}`}
+                />
+                <div
+                  className={`absolute bottom-0 left-0 w-[32px] h-[32px] border-b-[4px] border-l-[4px] rounded-bl-[16px] transition-all duration-300 ${cornerColorClass}`}
+                />
+                <div
+                  className={`absolute bottom-0 right-0 w-[32px] h-[32px] border-b-[4px] border-r-[4px] rounded-br-[16px] transition-all duration-300 ${cornerColorClass}`}
+                />
 
-                {/* Animated Horizontal Scanning Line */}
-                <div className="absolute left-1 right-1 h-0.5 bg-gradient-to-r from-transparent via-[#473bf0] to-transparent shadow-[0_0_15px_#473bf0] animate-pulse top-1/2 -translate-y-1/2" />
-              </div>
+                {/* Continuous Moving Scan Line (2s duration, easeInOut, infinite reverse, 80% width, #6C5CE7) */}
+                {scanStatus !== "success" && (
+                  <motion.div
+                    className="absolute left-1/2 -translate-x-1/2 h-[2px] w-[80%] rounded-full opacity-90 pointer-events-none"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, transparent 0%, #6C5CE7 35%, #60A5FA 50%, #6C5CE7 65%, transparent 100%)",
+                      boxShadow: "0 0 15px #6C5CE7, 0 0 8px #60A5FA",
+                    }}
+                    animate={{ y: [-105, 105, -105] }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut",
+                    }}
+                  />
+                )}
+
+                {/* Success Banner Overlay inside Frame */}
+                {scanStatus === "success" && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-emerald-950/80 backdrop-blur-md border border-emerald-400/60 text-emerald-300 text-xs font-black shadow-xl"
+                  >
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 animate-bounce" />
+                    <span>✓ QR Code Terdeteksi</span>
+                  </motion.div>
+                )}
+              </motion.div>
 
               {/* Bottom Spacer */}
               <div className="h-2" />
@@ -373,7 +433,6 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
       {scanStatus === "success" && detectedTablet && (
         <div className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in">
           <div className="w-full max-w-[430px] bg-white dark:bg-slate-900 rounded-t-3xl p-5 space-y-4 border-t border-slate-200 dark:border-slate-700 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-
             {/* Handle Pill */}
             <div className="flex justify-center -mt-1">
               <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
@@ -386,7 +445,7 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
               </div>
               <div className="min-w-0">
                 <h3 className="text-base font-black text-slate-900 dark:text-slate-100 leading-tight">
-                  QR Code Berhasil Terdeteksi
+                  ✓ QR Code Berhasil Ditemukan
                 </h3>
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold block mt-0.5">
                   Unit tablet siap di-inspeksi
@@ -447,7 +506,6 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
       {scanStatus === "error" && (
         <div className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm flex items-end justify-center animate-in fade-in">
           <div className="w-full max-w-[430px] bg-white dark:bg-slate-900 rounded-t-3xl p-5 space-y-4 border-t border-slate-200 dark:border-slate-700 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-
             {/* Handle Pill */}
             <div className="flex justify-center -mt-1">
               <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
