@@ -127,8 +127,8 @@ export const tabletsService = {
       payload.location_id && payload.location_id.trim() !== "" ? payload.location_id.trim() : null;
 
     const insertData = {
-      qr_code: payload.qr_code.trim(),
-      serial_number: payload.serial_number.trim(),
+      qr_code: payload.qr_code.trim().toUpperCase(),
+      serial_number: payload.serial_number.trim().toUpperCase(),
       brand: payload.brand ? payload.brand.trim() : "Samsung",
       model: payload.model.trim(),
       location_id: cleanLocationId,
@@ -144,22 +144,22 @@ export const tabletsService = {
         .single();
 
       if (!error && data) return data as unknown as Tablet;
-      if (error) console.error("createTablet Supabase error:", error);
-    } catch (e) {
+      if (error) {
+        console.error("createTablet Supabase error:", error);
+        if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
+          if (error.message?.includes("qr_code")) {
+            throw new Error(`Kode Tablet '${insertData.qr_code}' sudah terdaftar. Gunakan kode lain.`);
+          }
+          if (error.message?.includes("serial_number")) {
+            throw new Error(`Serial Number '${insertData.serial_number}' sudah terdaftar. Gunakan serial number lain.`);
+          }
+          throw new Error("Kode Tablet atau Serial Number sudah terdaftar di sistem.");
+        }
+        throw new Error(error.message || "Gagal menambahkan tablet ke database Supabase.");
+      }
+    } catch (e: any) {
+      if (e.message && (e.message.includes("terdaftar") || e.message.includes("Gagal"))) throw e;
       console.error("createTablet Supabase exception:", e);
-    }
-
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { data, error } = await adminSupabase
-          .from("tablets")
-          .insert([insertData])
-          .select("*, location:locations(*)")
-          .single();
-
-        if (!error && data) return data as unknown as Tablet;
-      } catch (e) {}
     }
 
     throw new Error("Gagal menambahkan tablet ke database Supabase.");
@@ -181,6 +181,8 @@ export const tabletsService = {
       updated_at: new Date().toISOString(),
     };
 
+    if (payload.qr_code) updateData.qr_code = payload.qr_code.trim().toUpperCase();
+    if (payload.serial_number) updateData.serial_number = payload.serial_number.trim().toUpperCase();
     if (payload.location_id !== undefined) {
       updateData.location_id =
         payload.location_id && payload.location_id.trim() !== "" ? payload.location_id.trim() : null;
@@ -196,20 +198,14 @@ export const tabletsService = {
         .single();
 
       if (!error && data) return data as unknown as Tablet;
-    } catch (e) {}
-
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { data, error } = await adminSupabase
-          .from("tablets")
-          .update(updateData)
-          .eq("id", id)
-          .select("*, location:locations(*)")
-          .single();
-
-        if (!error && data) return data as unknown as Tablet;
-      } catch (e) {}
+      if (error) {
+        if (error.code === "23505" || error.message?.includes("unique")) {
+          throw new Error("Kode Tablet atau Serial Number sudah terdaftar di sistem.");
+        }
+        throw new Error(error.message || "Gagal memperbarui data tablet di Supabase.");
+      }
+    } catch (e: any) {
+      if (e.message && (e.message.includes("terdaftar") || e.message.includes("Gagal"))) throw e;
     }
 
     throw new Error("Gagal memperbarui data tablet di Supabase.");
@@ -231,18 +227,6 @@ export const tabletsService = {
       if (!error) return true;
     } catch (e) {}
 
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { error } = await adminSupabase
-          .from("tablets")
-          .update({ deleted_at: new Date().toISOString() })
-          .eq("id", id);
-
-        if (!error) return true;
-      } catch (e) {}
-    }
-
     return false;
   },
 
@@ -262,8 +246,8 @@ export const tabletsService = {
     }>
   ): Promise<{ successCount: number; failedCount: number; imported: Tablet[]; errors: any[] }> {
     const cleanItems = items.map((item) => ({
-      qr_code: item.qr_code ? item.qr_code.trim() : generateUniqueQrCode(),
-      serial_number: item.serial_number ? item.serial_number.trim() : "",
+      qr_code: item.qr_code ? item.qr_code.trim().toUpperCase() : generateUniqueQrCode(),
+      serial_number: item.serial_number ? item.serial_number.trim().toUpperCase() : "",
       brand: item.brand ? item.brand.trim() : "Samsung",
       model: item.model ? item.model.trim() : "",
       location_id:
@@ -287,28 +271,11 @@ export const tabletsService = {
         };
       } else if (error) {
         console.error("bulkImportTablets Supabase error:", error);
+        throw new Error(error.message || "Gagal mengimpor data tablet ke Supabase.");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("bulkImportTablets Supabase exception:", e);
-    }
-
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { data, error } = await adminSupabase
-          .from("tablets")
-          .insert(cleanItems)
-          .select("*, location:locations(*)");
-
-        if (!error && data) {
-          return {
-            successCount: data.length,
-            failedCount: 0,
-            imported: data as unknown as Tablet[],
-            errors: [],
-          };
-        }
-      } catch (e) {}
+      throw e;
     }
 
     throw new Error("Gagal mengimpor tablet ke Supabase.");

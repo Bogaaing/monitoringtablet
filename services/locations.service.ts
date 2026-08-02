@@ -75,9 +75,9 @@ export const locationsService = {
 
   async createLocation(payload: { code: string; name: string; address?: string }): Promise<Location> {
     const cleanPayload = {
-      code: payload.code.trim(),
+      code: payload.code.trim().toUpperCase(),
       name: payload.name.trim(),
-      address: payload.address ? payload.address.trim() : null,
+      address: payload.address && payload.address.trim() !== "" ? payload.address.trim() : null,
     };
 
     try {
@@ -88,20 +88,23 @@ export const locationsService = {
         .select()
         .single();
 
-      if (!error && data) return data as Location;
-    } catch (e) {}
+      if (!error && data) {
+        return data as Location;
+      }
 
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { data, error } = await adminSupabase
-          .from("locations")
-          .insert([cleanPayload])
-          .select()
-          .single();
-
-        if (!error && data) return data as Location;
-      } catch (e) {}
+      if (error) {
+        console.error("createLocation Supabase error:", error);
+        if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
+          throw new Error(`Kode lokasi '${cleanPayload.code}' sudah terdaftar di sistem. Silakan gunakan kode lokasi lain.`);
+        }
+        throw new Error(error.message || "Gagal menyimpan data lokasi ke database Supabase.");
+      }
+    } catch (e: any) {
+      if (e.message && (e.message.includes("terdaftar") || e.message.includes("Gagal"))) {
+        throw e;
+      }
+      console.error("createLocation exception:", e);
+      throw new Error(e.message || "Terjadi kesalahan jaringan saat menghubungi server Supabase.");
     }
 
     throw new Error("Gagal membuat lokasi penempatan di Supabase.");
@@ -113,6 +116,12 @@ export const locationsService = {
       updated_at: new Date().toISOString(),
     };
 
+    if (payload.code) updateData.code = payload.code.trim().toUpperCase();
+    if (payload.name) updateData.name = payload.name.trim();
+    if (payload.address !== undefined) {
+      updateData.address = payload.address && payload.address.trim() !== "" ? payload.address.trim() : null;
+    }
+
     try {
       const supabase = createClient() as any;
       const { data, error } = await supabase
@@ -123,20 +132,14 @@ export const locationsService = {
         .single();
 
       if (!error && data) return data as Location;
-    } catch (e) {}
-
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { data, error } = await adminSupabase
-          .from("locations")
-          .update(updateData)
-          .eq("id", id)
-          .select()
-          .single();
-
-        if (!error && data) return data as Location;
-      } catch (e) {}
+      if (error) {
+        if (error.code === "23505" || error.message?.includes("unique")) {
+          throw new Error(`Kode lokasi '${updateData.code}' sudah digunakan oleh lokasi lain.`);
+        }
+        throw new Error(error.message || "Gagal memperbarui data lokasi di Supabase.");
+      }
+    } catch (e: any) {
+      if (e.message && e.message.includes("sudah digunakan")) throw e;
     }
 
     throw new Error("Gagal memperbarui lokasi di Supabase.");
@@ -152,18 +155,6 @@ export const locationsService = {
 
       if (!error) return true;
     } catch (e) {}
-
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { error } = await adminSupabase
-          .from("locations")
-          .update({ deleted_at: new Date().toISOString() })
-          .eq("id", id);
-
-        if (!error) return true;
-      } catch (e) {}
-    }
 
     return false;
   },
