@@ -2,147 +2,175 @@
 
 import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatGradientCard } from "@/components/dashboard/stat-gradient-card";
-import { GlassCard } from "@/components/dashboard/glass-card";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { dashboardService, PicDashboardStats } from "@/services/dashboard.service";
-import { Tablet, CheckCircle2, Clock, QrCode, ArrowRight, Activity, MapPin } from "lucide-react";
+import { authService } from "@/services/auth.service";
+import { User } from "@/types";
+import { Tablet, CheckCircle2, Clock, QrCode, ArrowRight, Activity, MapPin, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 export default function PicDashboardPage() {
   const [stats, setStats] = useState<PicDashboardStats | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    dashboardService.getPicStats("20000000-0000-0000-0000-000000000002").then((res) => {
-      setStats(res);
-      setLoading(false);
+    authService.getCurrentProfile().then((u) => {
+      setCurrentUser(u);
+      dashboardService.getPicStats(u?.id || "user-pic-demo").then((res) => {
+        setStats(res);
+        setLoading(false);
+      });
     });
   }, []);
 
+  const total = stats?.assignedTabletsCount || 1;
+  const completed = stats?.completedCount || 0;
+  const remaining = stats?.remainingCount || 0;
+  const progressPct = Math.min(100, Math.round((completed / total) * 100));
+
   return (
-    <div className="space-y-6">
-      {/* Top Page Header with Action Button */}
-      <PageHeader
-        title="Dashboard Inspeksi PIC"
-        description="Pantau status unit tablet yang ditugaskan pada area operasional Anda."
-      >
-        <Link href="/pic/scan">
-          <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5">
-            <QrCode className="h-4 w-4" />
-            <span>Scan QR Code Tablet</span>
-          </Button>
-        </Link>
-      </PageHeader>
+    <div className="space-y-5 animate-in fade-in">
+      {/* Mobile Greeting Card */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/25 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-white/20 backdrop-blur-sm">
+            SUPERVISOR AREA
+          </span>
+          <span className="text-[10px] font-mono text-indigo-100 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-amber-300" />
+            <span>PWA Active</span>
+          </span>
+        </div>
 
-      {/* 3 KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <StatGradientCard
-          title="Assigned Tablets"
-          value={loading ? "..." : stats?.assignedTabletsCount || 0}
-          description="Tablet di area penugasan"
-          icon={Tablet}
-          gradient="indigo"
-          badgeText="Total Unit"
-        />
-
-        <StatGradientCard
-          title="Completed"
-          value={loading ? "..." : stats?.completedCount || 0}
-          description="Sudah di-inspeksi"
-          icon={CheckCircle2}
-          gradient="emerald"
-          badgeText="Selesai"
-        />
-
-        <StatGradientCard
-          title="Remaining"
-          value={loading ? "..." : stats?.remainingCount || 0}
-          description="Belum di-inspeksi"
-          icon={Clock}
-          gradient="amber"
-          badgeText="Belum Diisi"
-        />
+        <h2 className="text-lg font-black tracking-tight leading-snug">
+          Selamat Datang, {currentUser?.name || "Ahmad Rizky"}!
+        </h2>
+        <p className="text-xs text-indigo-100 font-medium">
+          Lokasi Penugasan: <strong className="text-white">{currentUser?.location?.name || "Gudang Utama A"}</strong>
+        </p>
       </div>
 
-      {/* Recent Inspections Section */}
-      <GlassCard className="p-6" glowColor="indigo">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Activity className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-              <span>Inspeksi Terbaru Saya</span>
+      {/* Hero Scan QR Button (Large 56px Touch Target for Mobile) */}
+      <Link href="/pic/scan" className="block">
+        <Button className="w-full min-h-[56px] bg-[#473bf0] hover:bg-indigo-700 active:scale-[0.98] text-white font-extrabold py-3.5 px-5 rounded-2xl shadow-xl shadow-indigo-500/30 flex items-center justify-between transition-all duration-200 border-2 border-indigo-400/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-white/20 text-white backdrop-blur-sm">
+              <QrCode className="w-6 h-6" />
+            </div>
+            <div className="text-left">
+              <span className="text-sm block font-black leading-none">Scan QR Code Tablet</span>
+              <span className="text-[11px] font-normal text-indigo-100 mt-1 block">
+                Mulai Inspeksi Fisik Bulanan
+              </span>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-indigo-200" />
+        </Button>
+      </Link>
+
+      {/* Target & Progress Cards */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider">
+              Target Inspeksi Bulanan
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Daftar pengajuan inspeksi tablet yang baru dikirimkan
-            </p>
+            <span className="text-xs font-mono font-bold text-indigo-600">
+              {progressPct}% Selesai
+            </span>
           </div>
 
+          {/* Progress Bar */}
+          <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+
+          {/* 3 Metric Counts */}
+          <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+              <span className="text-[10px] text-slate-500 block font-semibold">Total Unit</span>
+              <span className="text-base font-black text-slate-900 dark:text-slate-100">
+                {loading ? "..." : total}
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40">
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block font-semibold">Selesai</span>
+              <span className="text-base font-black text-emerald-700 dark:text-emerald-300">
+                {loading ? "..." : completed}
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40">
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 block font-semibold">Sisa</span>
+              <span className="text-base font-black text-amber-700 dark:text-amber-300">
+                {loading ? "..." : remaining}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Inspection History */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <Activity className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Pengajuan Terbaru</span>
+          </h3>
+
           <Link href="/pic/inspections">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-indigo-600 hover:bg-indigo-50">
-              <span>Lihat Seluruh Riwayat</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+              Lihat Semua →
+            </span>
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kode Tablet</TableHead>
-                <TableHead>Model / Merk</TableHead>
-                <TableHead>Lokasi Area</TableHead>
-                <TableHead>Waktu Kirim</TableHead>
-                <TableHead>Status Review</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                    Memuat inspeksi terbaru...
-                  </TableCell>
-                </TableRow>
-              ) : !stats?.recentInspections || stats.recentInspections.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                    Belum ada inspeksi yang dikirimkan periode ini.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                stats.recentInspections.map((ins) => (
-                  <TableRow key={ins.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                    <TableCell className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+        {!stats?.recentInspections || stats.recentInspections.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center text-xs text-slate-500">
+              Belum ada pengajuan inspeksi periode ini.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {stats.recentInspections.slice(0, 5).map((ins) => (
+              <Card key={ins.id} className="hover:border-indigo-300 transition-colors shadow-sm">
+                <CardContent className="p-3 flex items-center justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <span className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400 block">
                       {ins.tablet?.qr_code || "QR-TAB-001"}
-                    </TableCell>
-                    <TableCell className="text-sm font-medium">
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200 block">
                       {ins.tablet?.model || "Galaxy Tab Active 3"}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600 dark:text-slate-400">
-                      <span className="inline-flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-indigo-500" />
-                        <span>{ins.tablet?.location?.name || "Gudang Utama A"}</span>
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs font-mono text-slate-500">
+                    </span>
+                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-indigo-400" />
+                      <span>{ins.tablet?.location?.name || "Gudang Utama A"}</span>
+                    </span>
+                  </div>
+
+                  <div className="text-right space-y-1">
+                    <StatusBadge status={ins.status} className="text-[10px]" />
+                    <span className="text-[10px] font-mono text-slate-400 block">
                       {new Date(ins.submitted_at).toLocaleTimeString("id-ID", {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={ins.status} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </GlassCard>
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

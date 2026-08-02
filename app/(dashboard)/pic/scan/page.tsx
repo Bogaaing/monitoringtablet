@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { tabletsService } from "@/services/tablets.service";
 import { periodsService } from "@/services/periods.service";
 import { authService } from "@/services/auth.service";
+import { offlineSyncService } from "@/services/offline-sync.service";
 import { inspectionsService, Inspection } from "@/services/inspections.service";
 import { Tablet, InspectionPeriod, User } from "@/types";
 import {
@@ -86,28 +87,35 @@ export default function PicScanPage() {
   const handleFormSubmit = async (formData: any) => {
     if (!scannedTablet || !activePeriod) return;
 
-    try {
-      await inspectionsService.submitInspection({
-        period_id: activePeriod.id,
-        tablet_id: scannedTablet.id,
-        pic_id: currentUser?.id || "user-pic-demo",
-        tablet_condition: formData.tablet_condition,
-        charger_condition: formData.charger_condition,
-        case_condition: formData.case_condition,
-        battery_pct: formData.battery_pct,
-        notes: formData.notes,
-        gps_lat: formData.gps_lat,
-        gps_lng: formData.gps_lng,
-        photos: formData.photos,
-        tablet_code: scannedTablet.qr_code,
-        year: activePeriod.year,
-        month: activePeriod.month,
-      });
+    const payload = {
+      period_id: activePeriod.id,
+      tablet_id: scannedTablet.id,
+      pic_id: currentUser?.id || "user-pic-demo",
+      tablet_condition: formData.tablet_condition,
+      charger_condition: formData.charger_condition,
+      case_condition: formData.case_condition,
+      battery_pct: formData.battery_pct,
+      notes: formData.notes,
+      gps_lat: formData.gps_lat,
+      gps_lng: formData.gps_lng,
+      photos: formData.photos,
+      tablet_code: scannedTablet.qr_code,
+      year: activePeriod.year,
+      month: activePeriod.month,
+    };
 
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      offlineSyncService.saveOffline(payload);
+      setStep("success");
+      return;
+    }
+
+    try {
+      await inspectionsService.submitInspection(payload);
       setStep("success");
     } catch (err: any) {
-      setErrorMessage(err.message || "Gagal menyimpan hasil inspeksi ke database Supabase.");
-      setStep("scan");
+      offlineSyncService.saveOffline(payload);
+      setStep("success");
     }
   };
 
