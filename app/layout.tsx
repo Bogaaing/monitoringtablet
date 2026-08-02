@@ -47,6 +47,18 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="TabMonitor" />
         <meta name="theme-color" content="#473bf0" />
+        {/* Capture beforeinstallprompt BEFORE React hydrates to prevent race condition */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.__pwaPrompt = null;
+              window.addEventListener('beforeinstallprompt', function(e) {
+                e.preventDefault();
+                window.__pwaPrompt = e;
+              });
+            `,
+          }}
+        />
       </head>
       <body
         className={`${jakarta.className} h-full bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white`}
