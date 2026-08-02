@@ -2,9 +2,8 @@
 
 import React from "react";
 import { User, InspectionPeriod, Role } from "@/types";
-import { Menu, LogOut, Calendar, Bell, User as UserIcon, Shield, RefreshCw } from "lucide-react";
+import { Menu, LogOut, Calendar, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
 
 interface NavbarProps {
   user?: User | null;
@@ -19,11 +18,28 @@ export function Navbar({
   onMenuToggle,
   onSignOut,
 }: NavbarProps) {
-  const router = useRouter();
-
-  const handleRoleSwitch = (newRole: Role) => {
-    document.cookie = `demo_role=${newRole}; path=/; max-age=86400`;
-    router.refresh();
+  const renderRoleBadge = (role?: Role) => {
+    switch (role) {
+      case "admin":
+        return (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 tracking-wider">
+            ADMIN
+          </span>
+        );
+      case "manager":
+        return (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 tracking-wider">
+            MANAGER
+          </span>
+        );
+      case "pic":
+      default:
+        return (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 tracking-wider">
+            PIC
+          </span>
+        );
+    }
   };
 
   return (
@@ -39,7 +55,7 @@ export function Navbar({
         </button>
 
         {/* Active Inspection Period Banner */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">
+        <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">
           <Calendar className="h-3.5 w-3.5" />
           <span>
             Periode Aktif:{" "}
@@ -48,58 +64,40 @@ export function Navbar({
         </div>
       </div>
 
-      {/* Right: Role Quick Switcher & User Profile */}
-      <div className="flex items-center gap-3">
-        {/* Quick Role Switcher for Demo */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-          <span className="text-[10px] font-bold text-slate-500 uppercase px-1.5 hidden lg:inline">
-            Switch Role:
-          </span>
-          {(["admin", "pic", "manager"] as Role[]).map((role) => (
-            <button
-              key={role}
-              onClick={() => handleRoleSwitch(role)}
-              className={`px-2 py-0.5 text-xs font-semibold rounded uppercase transition-all ${
-                user?.role === role
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700"
-              }`}
-            >
-              {role}
-            </button>
-          ))}
-        </div>
-
-        <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 hidden sm:block" />
-
-        {/* User Card */}
+      {/* Right: Authenticated User Profile & Logout */}
+      <div className="flex items-center gap-4">
+        {/* User Profile Info Card */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-sm border border-indigo-200 dark:border-indigo-800">
-              {user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon className="h-4 w-4" />}
-            </div>
-            <div className="hidden md:flex flex-col">
-              <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-none">
-                {user?.name || "Pengguna"}
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {user?.email || "user@monitoring.com"}
-              </span>
-            </div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-sm border border-indigo-200 dark:border-indigo-800 shrink-0 shadow-sm">
+            {user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon className="h-4 w-4" />}
           </div>
 
-          {/* Sign Out Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onSignOut}
-            className="text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 gap-1.5"
-            title="Keluar"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Keluar</span>
-          </Button>
+          <div className="hidden md:flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-none">
+                {user?.name || "Pengguna"}
+              </span>
+              {renderRoleBadge(user?.role)}
+            </div>
+            <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+              {user?.email || "user@monitoring.com"}
+            </span>
+          </div>
         </div>
+
+        <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+
+        {/* Sign Out / Logout Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onSignOut}
+          className="text-slate-600 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 gap-1.5 font-semibold text-xs transition-colors"
+          title="Keluar dari Sistem"
+        >
+          <LogOut className="h-4 w-4 text-rose-500" />
+          <span className="hidden sm:inline">Keluar</span>
+        </Button>
       </div>
     </header>
   );
