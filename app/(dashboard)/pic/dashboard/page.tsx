@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { dashboardService, PicDashboardStats } from "@/services/dashboard.service";
-import { Tablet, CheckCircle2, Clock, QrCode, ArrowRight, Activity, MapPin, Sparkles } from "lucide-react";
+import { Tablet, CheckCircle2, Clock, QrCode, ArrowRight, Activity, MapPin } from "lucide-react";
 import Link from "next/link";
 
 export default function PicDashboardPage() {
@@ -23,42 +23,21 @@ export default function PicDashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-8">
-      {/* Clean Solid Scan Hero Banner */}
-      <div className="rounded-3xl bg-slate-900 p-8 text-white shadow-xl border border-slate-800">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-950 border border-indigo-800 text-indigo-400 text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-              <span>Dashboard Kepala Regu (PIC)</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-              Siap Inspeksi Tablet Hari Ini?
-            </h1>
-            <p className="text-sm text-slate-400 max-w-lg">
-              Pindai QR Code pada fisik tablet menggunakan kamera perangkat Anda untuk mengisi formulir inspeksi bulanan.
-            </p>
-          </div>
-
-          {/* Solid Action Button */}
-          <Link href="/pic/scan" className="shrink-0">
-            <Button
-              size="lg"
-              className="gap-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-8 py-7 rounded-2xl shadow-lg transition-all text-base"
-            >
-              <QrCode className="h-6 w-6" />
-              <span>Scan QR Code Tablet</span>
-            </Button>
-          </Link>
-        </div>
-      </div>
-
+    <div className="space-y-6">
+      {/* Top Page Header with Action Button */}
       <PageHeader
-        title="Ringkasan Inspeksi Saya"
+        title="Dashboard Inspeksi PIC"
         description="Pantau status unit tablet yang ditugaskan pada area operasional Anda."
-      />
+      >
+        <Link href="/pic/scan">
+          <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5">
+            <QrCode className="h-4 w-4" />
+            <span>Scan QR Code Tablet</span>
+          </Button>
+        </Link>
+      </PageHeader>
 
-      {/* 3 Solid Stat Cards */}
+      {/* 3 KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <StatGradientCard
           title="Assigned Tablets"

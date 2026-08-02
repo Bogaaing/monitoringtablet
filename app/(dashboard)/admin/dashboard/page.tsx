@@ -25,7 +25,6 @@ import {
   AlertTriangle,
   Activity,
   Calendar,
-  Sparkles,
   Zap,
   ChevronRight,
   Shield,
@@ -51,38 +50,14 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Executive Clean Solid Hero Banner */}
-      <div className="rounded-3xl bg-slate-900 p-8 text-white shadow-xl border border-slate-800">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-950 border border-indigo-800 text-indigo-400 text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-              <span>Admin Control Center</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-              Executive System Overview
-            </h1>
-            <p className="text-sm text-slate-400 max-w-xl">
-              Ringkasan real-time inventaris tablet, sebaran lokasi operasional, dan status progres pengujian bulanan.
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Top Page Header */}
+      <PageHeader
+        title="Dashboard System Overview"
+        description="Ringkasan real-time inventaris tablet, sebaran lokasi operasional, dan status progres pengujian bulanan."
+      />
 
-          <div className="flex items-center gap-3 bg-slate-800/90 p-3 rounded-2xl border border-slate-700">
-            <div className="p-2.5 bg-indigo-950 rounded-xl text-indigo-400 border border-indigo-800">
-              <Calendar className="h-5 w-5" />
-            </div>
-            <div className="pr-4 text-xs">
-              <span className="text-slate-400 block font-medium">Periode Inspeksi</span>
-              <span className="font-bold text-white text-sm">
-                {stats?.activePeriodName || "Periode Aktif"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 5 Solid Metric Cards Grid */}
+      {/* 5 KPI Summary Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatGradientCard
           title="Total Tablet"

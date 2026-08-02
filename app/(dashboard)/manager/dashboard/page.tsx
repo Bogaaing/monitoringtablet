@@ -21,7 +21,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Clock, CheckCircle2, XCircle, ArrowRight, Activity, MapPin, Layers, Sparkles, ShieldCheck } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, ArrowRight, Activity, MapPin, Layers, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function ManagerDashboardPage() {
@@ -38,41 +38,21 @@ export default function ManagerDashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-8">
-      {/* Clean Solid Hero Banner */}
-      <div className="rounded-3xl bg-slate-900 p-8 text-white shadow-xl border border-slate-800">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950 border border-amber-800 text-amber-400 text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-              <span>Manager Operations Dashboard</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-              Review & Persetujuan Inspeksi
-            </h1>
-            <p className="text-sm text-slate-400 max-w-xl">
-              Pantau antrean persetujuan pengujian tablet dari seluruh Kepala Regu (PIC) dan verifikasi kelayakan perangkat.
-            </p>
-          </div>
-
-          <Link href="/manager/approvals" className="shrink-0">
-            <Button
-              size="lg"
-              className="gap-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-7 py-6 rounded-2xl shadow-lg transition-all text-sm"
-            >
-              <ShieldCheck className="h-5 w-5" />
-              <span>Buka Menu Approval ({stats?.waitingApprovalCount || 0})</span>
-            </Button>
-          </Link>
-        </div>
-      </div>
-
+    <div className="space-y-6">
+      {/* Top Page Header with Action Button */}
       <PageHeader
-        title="Ringkasan Operasional & Approval"
-        description="Analisis grafik progres inspeksi per lokasi area dan distribusi status pengajuan."
-      />
+        title="Dashboard Operations Manager"
+        description="Analisis grafik progres inspeksi per lokasi area dan verifikasi status persetujuan pengujian."
+      >
+        <Link href="/manager/approvals">
+          <Button className="gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-5 py-2.5">
+            <ShieldCheck className="h-4 w-4" />
+            <span>Buka Menu Approval ({stats?.waitingApprovalCount || 0})</span>
+          </Button>
+        </Link>
+      </PageHeader>
 
-      {/* 4 Solid Stat Cards */}
+      {/* 4 KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatGradientCard
           title="Waiting Approval"
