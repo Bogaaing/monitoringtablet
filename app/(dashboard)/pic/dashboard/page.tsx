@@ -4,9 +4,10 @@ import React, { useState, useEffect } from "react";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { dashboardService, PicDashboardStats } from "@/services/dashboard.service";
 import { periodsService } from "@/services/periods.service";
 import { authService } from "@/services/auth.service";
+import { tabletsService } from "@/services/tablets.service";
+import { inspectionsService, Inspection } from "@/services/inspections.service";
 import { User, InspectionPeriod } from "@/types";
 import {
   QrCode,
@@ -16,9 +17,7 @@ import {
   Clock,
   BarChart3,
   CheckCircle2,
-  AlertCircle,
   XCircle,
-  MapPin,
   ChevronRight,
   Sparkles,
   Activity,
@@ -26,40 +25,45 @@ import {
 import Link from "next/link";
 
 export default function PicDashboardPage() {
-  const [stats, setStats] = useState<PicDashboardStats | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activePeriod, setActivePeriod] = useState<InspectionPeriod | null>(null);
+  const [inspectionsList, setInspectionsList] = useState<Inspection[]>([]);
+  const [assignedTabletsCount, setAssignedTabletsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       authService.getCurrentProfile(),
       periodsService.getActivePeriod(),
-    ]).then(([u, p]) => {
+    ]).then(async ([u, p]) => {
       setCurrentUser(u);
       setActivePeriod(p);
-      dashboardService.getPicStats(u?.id || "user-pic-demo").then((res) => {
-        setStats(res);
+
+      try {
+        const [tabRes, inspRes] = await Promise.all([
+          tabletsService.getTablets({ locationId: u?.location_id || undefined, limit: 200 }),
+          inspectionsService.getInspections({ periodId: p?.id, limit: 200 }),
+        ]);
+
+        setAssignedTabletsCount(tabRes.data.length || 0);
+        setInspectionsList(inspRes.data || []);
+      } catch (e) {
+        console.error("Dashboard data load error:", e);
+      } finally {
         setLoading(false);
-      });
+      }
     });
   }, []);
 
-  const total = stats?.assignedTabletsCount || 10;
-  const completed = stats?.completedCount || 4;
-  const remaining = Math.max(0, total - completed);
-  const progressPct = Math.min(100, Math.round((completed / total) * 100));
+  // Compute Live Statistics from Supabase
+  const totalTablets = assignedTabletsCount > 0 ? assignedTabletsCount : Math.max(inspectionsList.length, 1);
+  const completedCount = inspectionsList.filter((i) => i.status === "approved").length;
+  const pendingCount = inspectionsList.filter((i) => i.status === "pending").length;
+  const needRepairCount = inspectionsList.filter((i) => i.status === "rejected").length;
+  const remainingCount = Math.max(0, totalTablets - (completedCount + pendingCount + needRepairCount));
+  const progressPct = totalTablets > 0 ? Math.min(100, Math.round((completedCount / totalTablets) * 100)) : 0;
 
-  // Today Date String (Indonesian Format)
-  const todayFormatted = new Date().toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-
-  const pendingInspections =
-    stats?.recentInspections?.filter((i) => i.status === "pending").slice(0, 3) || [];
+  const pendingInspections = inspectionsList.filter((i) => i.status === "pending").slice(0, 3);
 
   return (
     <div className="space-y-4 animate-in fade-in pb-2">
@@ -101,47 +105,31 @@ export default function PicDashboardPage() {
         </Button>
       </Link>
 
-      {/* ── 3. TODAY TARGET DASHBOARD CARD ── */}
+      {/* ── 3. PROGRES INSPEKSI BULANAN CARD ── */}
       <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
+        <CardContent className="p-4 space-y-3.5">
+          {/* Header Row */}
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
             <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
-                Target Hari Ini
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Progres Inspeksi Bulanan</span>
               </h3>
-              <span className="text-[10px] text-slate-400 font-medium block mt-0.5">
-                {todayFormatted}
+              <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
+                Periode: <strong className="text-indigo-600 dark:text-indigo-400">{activePeriod?.name || "Agustus 2026"}</strong>
               </span>
             </div>
-            <span className="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
-              Target: {total} Unit
-            </span>
+
+            <Link href="/pic/tasks">
+              <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 shrink-0 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
+                Lihat Detail <ChevronRight className="w-3.5 h-3.5" />
+              </span>
+            </Link>
           </div>
 
-          {/* Today KPI Grid + Circular SVG Gauge */}
-          <div className="flex items-center justify-between gap-3 pt-1">
-            {/* Left Counts */}
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40">
-                <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">
-                  Selesai
-                </span>
-                <span className="text-sm font-black text-emerald-700 dark:text-emerald-300">
-                  {loading ? "·" : completed}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40">
-                <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold">
-                  Sisa
-                </span>
-                <span className="text-sm font-black text-amber-700 dark:text-amber-300">
-                  {loading ? "·" : remaining}
-                </span>
-              </div>
-            </div>
-
-            {/* Right Circular Gauge */}
+          {/* Center Circular Progress + 5 Color-Coded Stats */}
+          <div className="flex items-center gap-3">
+            {/* Circular Progress Gauge (Blue/Indigo) */}
             <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
               <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 36 36">
                 <path
@@ -162,60 +150,85 @@ export default function PicDashboardPage() {
                 />
               </svg>
               <div className="absolute flex flex-col items-center justify-center text-center">
-                <span className="text-xs font-black text-slate-900 dark:text-slate-100 leading-none">
+                <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 leading-none">
                   {progressPct}%
                 </span>
                 <span className="text-[8px] text-slate-400 font-semibold leading-none mt-0.5">
-                  Completed
+                  Progres
                 </span>
+              </div>
+            </div>
+
+            {/* 5 Color-Coded Stats Grid */}
+            <div className="grid grid-cols-2 gap-1.5 flex-1 text-[10px]">
+              {/* Total Tablet (Blue/Indigo) */}
+              <div className="p-1.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 flex items-center justify-between">
+                <span className="text-slate-600 dark:text-slate-400 font-semibold">Total Tablet</span>
+                <span className="font-black text-indigo-600 dark:text-indigo-400 font-mono text-xs">{loading ? "·" : `${totalTablets} Unit`}</span>
+              </div>
+
+              {/* Completed (Green) */}
+              <div className="p-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between">
+                <span className="text-emerald-700 dark:text-emerald-300 font-semibold">Completed</span>
+                <span className="font-black text-emerald-700 dark:text-emerald-300 font-mono text-xs">{loading ? "·" : `${completedCount} Unit`}</span>
+              </div>
+
+              {/* Pending Approval (Orange) */}
+              <div className="p-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 flex items-center justify-between">
+                <span className="text-amber-700 dark:text-amber-300 font-semibold">Pending</span>
+                <span className="font-black text-amber-700 dark:text-amber-300 font-mono text-xs">{loading ? "·" : `${pendingCount} Unit`}</span>
+              </div>
+
+              {/* Need Repair (Red) */}
+              <div className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 flex items-center justify-between">
+                <span className="text-rose-700 dark:text-rose-300 font-semibold">Need Repair</span>
+                <span className="font-black text-rose-700 dark:text-rose-300 font-mono text-xs">{loading ? "·" : `${needRepairCount} Unit`}</span>
+              </div>
+
+              {/* Remaining (Gray) */}
+              <div className="col-span-2 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <span className="text-slate-600 dark:text-slate-400 font-semibold">Remaining</span>
+                <span className="font-black text-slate-700 dark:text-slate-300 font-mono text-xs">{loading ? "·" : `${remainingCount} Unit`}</span>
               </div>
             </div>
           </div>
 
-          {/* Motivational Helper Text */}
+          {/* Helper Message Text */}
           <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <span>
-              {remaining > 0
-                ? `${remaining} unit lagi untuk mencapai target hari ini.`
-                : "Semua target hari ini telah tercapai! Great job! 🎉"}
+              {completedCount > 0
+                ? `${completedCount} dari ${totalTablets} tablet telah berhasil diperiksa.`
+                : `Masih tersisa ${remainingCount} tablet untuk menyelesaikan inspeksi periode ${activePeriod?.name || "Agustus 2026"}.`}
             </span>
+          </div>
+
+          {/* Multi-Color Segmented Progress Bar */}
+          <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex">
+            {totalTablets > 0 && (
+              <>
+                <div
+                  className="h-full bg-emerald-500 transition-all duration-500"
+                  style={{ width: `${(completedCount / totalTablets) * 100}%` }}
+                  title="Completed"
+                />
+                <div
+                  className="h-full bg-amber-500 transition-all duration-500"
+                  style={{ width: `${(pendingCount / totalTablets) * 100}%` }}
+                  title="Pending Approval"
+                />
+                <div
+                  className="h-full bg-rose-500 transition-all duration-500"
+                  style={{ width: `${(needRepairCount / totalTablets) * 100}%` }}
+                  title="Need Repair"
+                />
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* ── 4. MONTHLY PROGRESS COMPACT CARD ── */}
-      <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl">
-        <CardContent className="p-3.5 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Monthly Progress
-            </span>
-            <Link href="/pic/tasks">
-              <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5">
-                Lihat Detail <ChevronRight className="w-3 h-3" />
-              </span>
-            </Link>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium pt-0.5">
-            <span>Progress: <strong className="text-slate-800 dark:text-slate-200">{progressPct}%</strong></span>
-            <span>Total: <strong className="text-slate-800 dark:text-slate-200">{total} Unit</strong></span>
-            <span>Selesai: <strong className="text-emerald-600">{completed}</strong></span>
-            <span>Sisa: <strong className="text-amber-600">{remaining}</strong></span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── 5. QUICK ACTIONS GRID ── */}
+      {/* ── 4. QUICK ACTIONS GRID ── */}
       <div className="space-y-2">
         <span className="text-xs font-black uppercase tracking-wider text-slate-500 px-1">
           Aksi Cepat
@@ -279,7 +292,7 @@ export default function PicDashboardPage() {
         </div>
       </div>
 
-      {/* ── 6. PENDING APPROVAL SECTION ── */}
+      {/* ── 5. PENDING APPROVAL SECTION ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -334,7 +347,7 @@ export default function PicDashboardPage() {
         )}
       </div>
 
-      {/* ── 7. TODAY ACTIVITY SECTION (TIMELINE) ── */}
+      {/* ── 6. TODAY ACTIVITY SECTION (TIMELINE) ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -345,12 +358,12 @@ export default function PicDashboardPage() {
 
         <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <CardContent className="p-3.5 space-y-3">
-            {!stats?.recentInspections || stats.recentInspections.length === 0 ? (
+            {inspectionsList.length === 0 ? (
               <p className="text-xs text-slate-500 text-center py-2">
                 Belum ada aktivitas inspeksi hari ini.
               </p>
             ) : (
-              stats.recentInspections.slice(0, 5).map((ins, idx, arr) => {
+              inspectionsList.slice(0, 5).map((ins, idx, arr) => {
                 const isApproved = ins.status === "approved";
                 const isRejected = ins.status === "rejected";
 
