@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { PageHeader } from "@/components/shared/page-header";
 import { authService } from "@/services/auth.service";
 import { User } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,10 +45,6 @@ export default function PicProfilePage() {
 
   return (
     <div className="space-y-5 animate-in fade-in">
-      <PageHeader
-        title="Profil PIC (Kepala Regu)"
-        description="Identitas penguji terotentikasi dan lokasi penugasan."
-      />
 
       {/* Avatar & Identitas Utama */}
       <Card className="border-indigo-100 dark:border-indigo-950 bg-gradient-to-b from-indigo-50/50 to-white dark:from-indigo-950/20 dark:to-slate-900 overflow-hidden shadow-sm">
