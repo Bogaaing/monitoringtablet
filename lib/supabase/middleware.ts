@@ -85,12 +85,12 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // Fallback demo mode reading cookie
+    // Fallback demo mode reading cookie (only if demo_role cookie is explicitly set)
     if (!isAuthenticated) {
       const demoRoleCookie = request.cookies.get("demo_role")?.value;
-      if (demoRoleCookie || isPlaceholder) {
+      if (demoRoleCookie) {
         isAuthenticated = true;
-        userRole = demoRoleCookie || "pic";
+        userRole = demoRoleCookie;
       }
     }
 
