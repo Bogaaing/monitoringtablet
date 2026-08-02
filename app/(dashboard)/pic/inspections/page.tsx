@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { SearchFilterBar } from "@/components/shared/search-filter-bar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +10,6 @@ import { inspectionsService, Inspection } from "@/services/inspections.service";
 import { authService } from "@/services/auth.service";
 import { User } from "@/types";
 import { QrCode, MapPin, Eye, X } from "lucide-react";
-import Link from "next/link";
 
 export default function PicInspectionsPage() {
   const [inspections, setInspections] = useState<Inspection[]>([]);
@@ -66,18 +64,7 @@ export default function PicInspectionsPage() {
   });
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Riwayat Inspeksi Saya"
-        description="Daftar pengajuan inspeksi tablet yang telah Anda kirimkan untuk peninjauan Manager."
-      >
-        <Link href="/pic/scan">
-          <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-            <QrCode className="h-4 w-4" />
-            <span>Scan Tablet Baru</span>
-          </Button>
-        </Link>
-      </PageHeader>
+    <div className="space-y-5">
 
       {/* Search & Filter Bar */}
       <SearchFilterBar
