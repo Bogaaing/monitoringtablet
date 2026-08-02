@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { QRScanner } from "@/components/pic/qr-scanner";
 import { InspectionForm } from "@/components/pic/inspection-form";
@@ -36,11 +37,23 @@ export default function PicScanPage() {
   const [loading, setLoading] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const searchParams = useSearchParams();
+  const autoTriggered = useRef(false);
 
   useEffect(() => {
     periodsService.getActivePeriod().then((p) => setActivePeriod(p));
     authService.getCurrentProfile().then((u) => setCurrentUser(u));
   }, []);
+
+  // Auto-scan if ?qr= query param is provided (from Tasks page)
+  useEffect(() => {
+    const qrParam = searchParams?.get("qr");
+    if (qrParam && !autoTriggered.current) {
+      autoTriggered.current = true;
+      handleScanSuccess(qrParam);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleScanSuccess = async (qrCode: string) => {
     setStep("validating");
