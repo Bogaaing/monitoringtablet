@@ -60,12 +60,18 @@ export const authService = {
 
     // Dev/Fallback profile based on cookie
     if (typeof document !== "undefined") {
-      const match = document.cookie.match(/(?:^|; )demo_role=([^;]*)/);
-      const role = (match ? match[1] : "admin") as Role;
+      const roleMatch = document.cookie.match(/(?:^|; )demo_role=([^;]*)/);
+      const emailMatch = document.cookie.match(/(?:^|; )user_email=([^;]*)/);
+      const role = (roleMatch ? roleMatch[1] : "admin") as Role;
+      const userEmail = emailMatch ? decodeURIComponent(emailMatch[1]) : `${role}@monitoring.com`;
+      const displayName = userEmail
+        ? userEmail.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+        : "User";
+
       return {
-        id: `user-${role}-demo`,
-        name: role === "admin" ? "Super Admin System" : role === "pic" ? "Ahmad Rizky (PIC)" : "Bambang Wijaya (Manager)",
-        email: `${role}@monitoring.com`,
+        id: `user-${role}-session`,
+        name: displayName,
+        email: userEmail,
         role: role,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -147,6 +153,7 @@ export const authService = {
       const detectedRole = userRole || "admin";
       if (typeof document !== "undefined") {
         document.cookie = `demo_role=${detectedRole}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `user_email=${encodeURIComponent(cleanEmail)}; path=/; max-age=86400; SameSite=Lax`;
       }
 
       return {
@@ -202,6 +209,7 @@ export const authService = {
     const supabase = createClient();
     if (typeof document !== "undefined") {
       document.cookie = "demo_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "user_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     }
     try {
       await supabase.auth.signOut();
