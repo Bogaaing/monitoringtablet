@@ -264,7 +264,7 @@ export default function AdminTabletsPage() {
           {/* Action 1: Add Tablet */}
           <Button onClick={handleOpenCreate} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold">
             <Plus className="h-4 w-4" />
-            <span>+ Add Tablet</span>
+            <span>Add Tablet</span>
           </Button>
 
           {/* Action 2: Import Excel */}
@@ -274,7 +274,7 @@ export default function AdminTabletsPage() {
             className="gap-1.5 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-xs font-bold"
           >
             <Upload className="h-4 w-4" />
-            <span>📥 Import Excel</span>
+            <span>Import Excel</span>
           </Button>
 
           {/* Action 3: Export Excel */}
@@ -284,7 +284,7 @@ export default function AdminTabletsPage() {
             className="gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold"
           >
             <Download className="h-4 w-4" />
-            <span>📤 Export Excel</span>
+            <span>Export Excel</span>
           </Button>
 
           {/* Action 4: Download Template */}
@@ -294,7 +294,7 @@ export default function AdminTabletsPage() {
             className="gap-1.5 text-slate-600 hover:text-indigo-600 text-xs font-medium"
           >
             <FileSpreadsheet className="h-4 w-4" />
-            <span>📄 Download Template</span>
+            <span>Download Template</span>
           </Button>
 
           {/* Action 5: Generate QR Batch */}
@@ -304,7 +304,7 @@ export default function AdminTabletsPage() {
             className="gap-1.5 border-purple-200 text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950 text-xs font-bold"
           >
             <Printer className="h-4 w-4" />
-            <span>🖨 Generate QR</span>
+            <span>Generate QR</span>
           </Button>
         </div>
       </PageHeader>
