@@ -121,13 +121,13 @@ export default function PicProfilePage() {
       </div>
 
       {/* Logout Action Button */}
-      <div className="pt-2">
+      <div className="pt-2 flex justify-center">
         <Button
           onClick={handleSignOut}
-          className="w-full min-h-[48px] bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-2xl shadow-md shadow-rose-200 dark:shadow-none flex items-center justify-center gap-2 text-sm transition-all"
+          className="px-6 min-h-[44px] bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-xl shadow-md shadow-rose-200 dark:shadow-none flex items-center justify-center gap-2 text-xs transition-all"
         >
-          <LogOut className="w-4 h-4" />
-          <span>Keluar Akun (Sign Out)</span>
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Sign Out</span>
         </Button>
       </div>
     </div>
