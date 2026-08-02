@@ -4,11 +4,13 @@ import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { SearchFilterBar } from "@/components/shared/search-filter-bar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { inspectionsService, Inspection } from "@/services/inspections.service";
-import { QrCode, MapPin, Eye, Calendar, BatteryCharging, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { authService } from "@/services/auth.service";
+import { User } from "@/types";
+import { QrCode, MapPin, Eye, X } from "lucide-react";
 import Link from "next/link";
 
 export default function PicInspectionsPage() {
@@ -17,15 +19,19 @@ export default function PicInspectionsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    authService.getCurrentProfile().then((u) => setCurrentUser(u));
+  }, []);
 
   const fetchInspections = async () => {
     setLoading(true);
     try {
       const res = await inspectionsService.getInspections({
-        picId: "20000000-0000-0000-0000-000000000002",
+        picId: currentUser?.id,
         status: statusFilter,
-        search,
-        limit: 50,
+        limit: 100,
       });
       setInspections(res.data);
     } catch (e) {
@@ -37,14 +43,14 @@ export default function PicInspectionsPage() {
 
   useEffect(() => {
     fetchInspections();
-  }, [statusFilter]);
+  }, [currentUser, statusFilter]);
 
   const filteredList = inspections.filter((ins) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return (
-      ins.tablet?.qr_code.toLowerCase().includes(s) ||
-      ins.tablet?.model.toLowerCase().includes(s) ||
+      ins.tablet?.qr_code?.toLowerCase().includes(s) ||
+      ins.tablet?.model?.toLowerCase().includes(s) ||
       (ins.tablet?.location?.name && ins.tablet.location.name.toLowerCase().includes(s))
     );
   });

@@ -61,8 +61,8 @@ export const inspectionsService = {
         .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users(*), reviewer:users(*), photos:inspection_photos(*)", { count: "exact" });
 
       if (status && status !== "all") query = query.eq("status", status);
-      if (periodId) query = query.eq("period_id", periodId);
-      if (picId) query = query.eq("pic_id", picId);
+      if (periodId && periodId !== "all") query = query.eq("period_id", periodId);
+      if (picId && picId !== "all" && picId.trim() !== "") query = query.eq("pic_id", picId);
 
       query = query.range(from, to).order("submitted_at", { ascending: false });
 
@@ -77,8 +77,8 @@ export const inspectionsService = {
             .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users(*), reviewer:users(*), photos:inspection_photos(*)", { count: "exact" });
 
           if (status && status !== "all") adminQuery = adminQuery.eq("status", status);
-          if (periodId) adminQuery = adminQuery.eq("period_id", periodId);
-          if (picId) adminQuery = adminQuery.eq("pic_id", picId);
+          if (periodId && periodId !== "all") adminQuery = adminQuery.eq("period_id", periodId);
+          if (picId && picId !== "all" && picId.trim() !== "") adminQuery = adminQuery.eq("pic_id", picId);
 
           adminQuery = adminQuery.range(from, to).order("submitted_at", { ascending: false });
           const res = await adminQuery;
