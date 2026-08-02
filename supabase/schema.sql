@@ -63,6 +63,12 @@ CREATE TABLE IF NOT EXISTS public.inspections (
   tablet_id UUID REFERENCES public.tablets(id) ON DELETE CASCADE NOT NULL,
   pic_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  tablet_condition TEXT DEFAULT 'good',
+  charger_condition TEXT DEFAULT 'available',
+  case_condition TEXT DEFAULT 'good',
+  battery_pct INT DEFAULT 100,
+  gps_lat NUMERIC,
+  gps_lng NUMERIC,
   notes TEXT,
   rejection_reason TEXT,
   submitted_at TIMESTAMPTZ DEFAULT now() NOT NULL,
@@ -71,6 +77,14 @@ CREATE TABLE IF NOT EXISTS public.inspections (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
+
+-- Schema Migration for Existing Table
+ALTER TABLE public.inspections ADD COLUMN IF NOT EXISTS tablet_condition TEXT DEFAULT 'good';
+ALTER TABLE public.inspections ADD COLUMN IF NOT EXISTS charger_condition TEXT DEFAULT 'available';
+ALTER TABLE public.inspections ADD COLUMN IF NOT EXISTS case_condition TEXT DEFAULT 'good';
+ALTER TABLE public.inspections ADD COLUMN IF NOT EXISTS battery_pct INT DEFAULT 100;
+ALTER TABLE public.inspections ADD COLUMN IF NOT EXISTS gps_lat NUMERIC;
+ALTER TABLE public.inspections ADD COLUMN IF NOT EXISTS gps_lng NUMERIC;
 
 CREATE TABLE IF NOT EXISTS public.inspection_photos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

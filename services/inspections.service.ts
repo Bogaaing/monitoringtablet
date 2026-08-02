@@ -169,29 +169,51 @@ export const inspectionsService = {
       });
     }
 
-    const insertPayload = {
+    const basePayload: any = {
       id: inspectionId,
       period_id: payload.period_id,
       tablet_id: payload.tablet_id,
       pic_id: validPicId,
       status: "pending",
+      notes: payload.notes || null,
+      submitted_at: new Date().toISOString(),
+    };
+
+    const fullPayload: any = {
+      ...basePayload,
       tablet_condition: payload.tablet_condition,
       charger_condition: payload.charger_condition,
       case_condition: payload.case_condition,
       battery_pct: payload.battery_pct,
-      notes: payload.notes || null,
       gps_lat: payload.gps_lat || null,
       gps_lng: payload.gps_lng || null,
-      submitted_at: new Date().toISOString(),
     };
 
     try {
       const supabase = createClient() as any;
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("inspections")
-        .insert([insertPayload])
+        .insert([fullPayload])
         .select("*, photos:inspection_photos(*)")
         .single();
+
+      // Fallback: If Supabase DB schema cache lacks battery_pct or condition columns
+      if (error && (error.message?.includes("column") || error.message?.includes("schema cache") || error.code === "PGRST204")) {
+        const formattedNotes = `[Baterai: ${payload.battery_pct}% | Fisik: ${payload.tablet_condition} | Charger: ${payload.charger_condition} | Case: ${payload.case_condition}]${payload.notes ? ` - ${payload.notes}` : ""}`;
+        const fallbackPayload = {
+          ...basePayload,
+          notes: formattedNotes,
+        };
+
+        const fbRes = await supabase
+          .from("inspections")
+          .insert([fallbackPayload])
+          .select("*, photos:inspection_photos(*)")
+          .single();
+
+        data = fbRes.data;
+        error = fbRes.error;
+      }
 
       if (!error && data) {
         // Save photo metadata in Supabase DB
