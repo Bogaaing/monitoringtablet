@@ -86,7 +86,7 @@ export default function AdminUsersPage() {
       name: "",
       email: "",
       role: "pic",
-      location_id: locations[0]?.id || "",
+      location_id: "",
       phone: "",
     });
     setFormError(null);

@@ -91,8 +91,20 @@ export const usersService = {
     phone?: string;
   }): Promise<User> {
     const cleanEmail = payload.email.trim().toLowerCase();
-    const cleanLocationId = payload.location_id && payload.location_id.trim() !== "" ? payload.location_id.trim() : null;
+    let cleanLocationId =
+      payload.location_id && payload.location_id.trim() !== "" ? payload.location_id.trim() : null;
     let authId: string | null = null;
+
+    // Verify cleanLocationId is valid in Supabase DB
+    if (cleanLocationId) {
+      try {
+        const supabase = createClient() as any;
+        const { data: loc } = await supabase.from("locations").select("id").eq("id", cleanLocationId).single();
+        if (!loc) cleanLocationId = null;
+      } catch (e) {
+        cleanLocationId = null;
+      }
+    }
 
     // 1. Attempt to create Auth User in Supabase Auth (auth.users) via Admin Client
     if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -145,14 +157,21 @@ export const usersService = {
         if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
           throw new Error(`Email '${cleanEmail}' sudah terdaftar di sistem. Silakan gunakan alamat email lain.`);
         }
+        if (error.code === "23503" || error.message?.includes("foreign key")) {
+          const fallbackPayload = { ...insertPayload, location_id: null };
+          const { data: fbData, error: fbError } = await supabase
+            .from("users")
+            .insert([fallbackPayload])
+            .select("*, location:locations(*)")
+            .single();
+
+          if (!fbError && fbData) return fbData as unknown as User;
+        }
         throw new Error(error.message || "Gagal menambahkan pengguna ke database Supabase.");
       }
     } catch (e: any) {
-      if (e.message && (e.message.includes("terdaftar") || e.message.includes("Gagal"))) {
-        throw e;
-      }
       console.error("createUser exception:", e);
-      throw new Error(e.message || "Terjadi kesalahan jaringan saat menghubungi server Supabase.");
+      throw new Error(e.message || "Terjadi kesalahan saat menyimpan data pengguna.");
     }
 
     throw new Error("Gagal menambahkan pengguna ke database Supabase.");
