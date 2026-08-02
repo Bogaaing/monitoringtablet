@@ -221,7 +221,7 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
       {mode === "camera" && (
         <div className="w-full space-y-3">
           {/* Viewfinder Container */}
-          <div className="relative w-full aspect-square rounded-3xl overflow-hidden bg-black shadow-2xl border-2 border-indigo-500/30 flex items-center justify-center">
+          <div className="relative w-full aspect-square rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center border-0">
 
             {/* Video Stream target (Clean Html5Qrcode instance) */}
             <div
@@ -239,16 +239,16 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
                 Arahkan QR Code ke dalam kotak untuk memulai pemindaian.
               </div>
 
-              {/* Centered 260x260 Viewfinder Frame */}
+              {/* Centered 260x260 Viewfinder Frame - The ONLY visible scanning frame */}
               <div className="relative w-[240px] h-[240px] xs:w-[260px] xs:h-[260px] my-auto">
-                {/* 4 Glowing Indigo Corner Indicators */}
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-indigo-500 rounded-tl-xl shadow-indigo-500/50 drop-shadow-md" />
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-indigo-500 rounded-tr-xl shadow-indigo-500/50 drop-shadow-md" />
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-indigo-500 rounded-bl-xl shadow-indigo-500/50 drop-shadow-md" />
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-indigo-500 rounded-br-xl shadow-indigo-500/50 drop-shadow-md" />
+                {/* 4 Purple Animated Corner Indicators (32px length, 4px stroke, 16px radius) */}
+                <div className="absolute top-0 left-0 w-[32px] h-[32px] border-t-[4px] border-l-[4px] border-[#473bf0] rounded-tl-[16px] shadow-[0_0_10px_#473bf0]" />
+                <div className="absolute top-0 right-0 w-[32px] h-[32px] border-t-[4px] border-r-[4px] border-[#473bf0] rounded-tr-[16px] shadow-[0_0_10px_#473bf0]" />
+                <div className="absolute bottom-0 left-0 w-[32px] h-[32px] border-b-[4px] border-l-[4px] border-[#473bf0] rounded-bl-[16px] shadow-[0_0_10px_#473bf0]" />
+                <div className="absolute bottom-0 right-0 w-[32px] h-[32px] border-b-[4px] border-r-[4px] border-[#473bf0] rounded-br-[16px] shadow-[0_0_10px_#473bf0]" />
 
-                {/* Animated Vertical Laser Line */}
-                <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-indigo-400 to-transparent shadow-[0_0_12px_#6366f1] animate-pulse top-1/2 -translate-y-1/2" />
+                {/* Animated Horizontal Scanning Line */}
+                <div className="absolute left-1 right-1 h-0.5 bg-gradient-to-r from-transparent via-[#473bf0] to-transparent shadow-[0_0_15px_#473bf0] animate-pulse top-1/2 -translate-y-1/2" />
               </div>
 
               {/* Bottom Spacer */}

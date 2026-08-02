@@ -89,4 +89,14 @@
     -ms-overflow-style: none !important;  /* IE and Edge */
     scrollbar-width: none !important;  /* Firefox */
   }
+
+  /* Strip any default borders or outlines injected by HTML5-QRCode scanner */
+  #qr-reader-video,
+  #qr-reader-video *,
+  #qr-reader-video video,
+  #qr-reader-video canvas {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
 }
