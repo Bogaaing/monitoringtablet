@@ -1,6 +1,9 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://qxvnjbvhrdsfeebrocrm.supabase.co";
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_VZ1EizLLJWwehWerw68ZtQ_R8msK-HO";
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -15,10 +18,7 @@ export async function updateSession(request: NextRequest) {
     pathname === "/reset-password";
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder";
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       cookies: {
         get(name: string) {
           return request.cookies.get(name)?.value;
@@ -46,47 +46,44 @@ export async function updateSession(request: NextRequest) {
 
     let userRole: string | null = null;
     let isAuthenticated = false;
-    const isPlaceholder = supabaseUrl.includes("placeholder");
 
     // 1. Check real Supabase Auth user first
-    if (!isPlaceholder) {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-        if (user) {
-          isAuthenticated = true;
-          let foundRole = user.user_metadata?.role;
+      if (user) {
+        isAuthenticated = true;
+        let foundRole = user.user_metadata?.role;
 
-          if (!foundRole) {
-            const { data: dbUserByAuth } = await supabase
+        if (!foundRole) {
+          const { data: dbUserByAuth } = await supabase
+            .from("users")
+            .select("role")
+            .eq("auth_id", user.id)
+            .single();
+
+          if (dbUserByAuth?.role) {
+            foundRole = dbUserByAuth.role;
+          } else if (user.email) {
+            const { data: dbUserByEmail } = await supabase
               .from("users")
               .select("role")
-              .eq("auth_id", user.id)
+              .ilike("email", user.email)
               .single();
 
-            if (dbUserByAuth?.role) {
-              foundRole = dbUserByAuth.role;
-            } else if (user.email) {
-              const { data: dbUserByEmail } = await supabase
-                .from("users")
-                .select("role")
-                .ilike("email", user.email)
-                .single();
-
-              if (dbUserByEmail?.role) foundRole = dbUserByEmail.role;
-            }
+            if (dbUserByEmail?.role) foundRole = dbUserByEmail.role;
           }
-
-          userRole = foundRole || "pic";
         }
-      } catch (err) {
-        // Suppress network errors
+
+        userRole = foundRole || "pic";
       }
+    } catch (err) {
+      // Suppress network errors
     }
 
-    // 2. Demo mode cookie fallback
+    // 2. Fallback cookie for active session
     if (!isAuthenticated) {
       const demoRoleCookie = request.cookies.get("demo_role")?.value;
       if (demoRoleCookie) {
