@@ -329,7 +329,7 @@ export default function PicTasksPage() {
       </div>
 
       {/* ── Filter Tabs ── */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1">
         {FILTER_TABS.map((tab) => (
           <button
             key={tab.key}
