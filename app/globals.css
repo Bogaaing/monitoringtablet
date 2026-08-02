@@ -100,3 +100,22 @@
     box-shadow: none !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+ *  Scanner Overlay Animations
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/* Scan line now uses native SVG <animate> instead of CSS transforms.
+ * CSS transforms on SVG elements break clipPath in mobile browsers. */
+
+/* Success badge pop-in */
+@keyframes successPop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.scanner-success-pop {
+  animation: successPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: center center;
+}
