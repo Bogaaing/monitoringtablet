@@ -32,7 +32,7 @@ export function LoginForm() {
       const result = await authService.signIn(email, password);
 
       if (result.error) {
-        setErrorMsg(result.error);
+        setErrorMsg(typeof result.error === "string" && result.error !== "{}" ? result.error : "Email atau kata sandi tidak sesuai.");
       } else if (result.redirectUrl) {
         window.location.href = result.redirectUrl;
       }
