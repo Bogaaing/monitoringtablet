@@ -11,8 +11,8 @@ export default function LoginPage() {
       <div className="w-full flex flex-col lg:flex-row min-h-screen">
         
         {/* ==================== LEFT SIDE: LOGIN FORM SECTION ==================== */}
-        <div className="w-full lg:w-[42%] xl:w-[38%] bg-white px-8 sm:px-12 md:px-16 lg:px-14 xl:px-20 py-10 flex flex-col justify-between z-10 border-r border-slate-100 min-h-screen lg:min-h-0">
-          <div>
+        <div className="w-full lg:w-[42%] xl:w-[38%] bg-white px-8 sm:px-12 md:px-14 lg:px-16 py-10 flex flex-col justify-between items-center lg:items-start z-10 border-r border-slate-100 min-h-screen lg:min-h-0">
+          <div className="w-full max-w-[400px]">
             {/* Brand Header Component */}
             <BrandHeader />
 
@@ -20,8 +20,8 @@ export default function LoginPage() {
             <SecurityBadge />
 
             {/* Welcome Heading */}
-            <div className="mb-8">
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
+            <div className="mb-7">
+              <h2 className="text-3xl sm:text-[40px] font-extrabold text-slate-900 tracking-tight mb-3 leading-none">
                 Welcome Back
               </h2>
               <p className="text-slate-500 text-sm font-normal">
@@ -33,8 +33,10 @@ export default function LoginPage() {
             <LoginForm />
           </div>
 
-          {/* Footer Component */}
-          <Footer />
+          {/* Footer Component (Aligned to max-w-[400px] form container) */}
+          <div className="w-full max-w-[400px]">
+            <Footer />
+          </div>
         </div>
 
         {/* ==================== RIGHT SIDE: 3D SHOWCASE & VISUAL PREVIEW ==================== */}

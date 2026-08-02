@@ -71,7 +71,7 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
-            className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent transition-all duration-200 h-11"
+            className="w-full pl-10 pr-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent transition-all duration-200 h-[52px]"
           />
         </div>
       </div>
@@ -93,7 +93,7 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
-            className="w-full pl-10 pr-10 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent transition-all duration-200 h-11"
+            className="w-full pl-10 pr-10 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent transition-all duration-200 h-[52px]"
           />
           <button
             type="button"
@@ -124,11 +124,11 @@ export function LoginForm() {
         </Link>
       </div>
 
-      {/* Submit Button */}
+      {/* Submit Button (18px spacing from Remember Me row) */}
       <Button
         type="submit"
         disabled={loading}
-        className="w-full mt-2 bg-[#473bf0] hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-indigo-200 flex items-center justify-center gap-2 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 h-11"
+        className="w-full mt-[18px] bg-[#473bf0] hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-indigo-200 flex items-center justify-center gap-2 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 h-[52px]"
       >
         {loading ? (
           <>
@@ -143,8 +143,8 @@ export function LoginForm() {
         )}
       </Button>
 
-      {/* Quick Autofill Options for Testing */}
-      <div className="pt-3 border-t border-slate-100 text-center space-y-1.5">
+      {/* Quick Autofill Options for Testing (18px spacing from Sign In button) */}
+      <div className="pt-[18px] border-t border-slate-100 text-center space-y-1.5">
         <span className="text-[11px] font-semibold text-slate-400 block">
           Pilih Akun Demo untuk Pengujian Cepat:
         </span>

@@ -3,7 +3,7 @@ import { Tablet } from "lucide-react";
 
 export function BrandHeader() {
   return (
-    <div className="flex items-center gap-3.5 mb-10">
+    <div className="flex items-center gap-3.5 mb-7">
       <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 to-blue-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
         <Tablet className="w-6 h-6 stroke-[2.2]" />
       </div>
