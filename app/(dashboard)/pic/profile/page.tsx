@@ -58,7 +58,7 @@ export default function PicProfilePage() {
               {currentUser?.name || "Ahmad Rizky"}
             </h3>
             <span className="inline-block mt-1 px-2.5 py-0.5 rounded text-xs font-black bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 tracking-wider uppercase">
-              PIC (SUPERVISOR)
+              PIC (KEPALA REGU)
             </span>
           </div>
 
