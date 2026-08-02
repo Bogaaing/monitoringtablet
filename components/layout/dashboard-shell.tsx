@@ -6,7 +6,6 @@ import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar";
 import { PicMobileHeader } from "@/components/pic/mobile-header";
 import { PicBottomNav } from "@/components/pic/bottom-nav";
-import { PwaInstallPrompt } from "@/components/pic/pwa-install-prompt";
 import { authService } from "@/services/auth.service";
 import { useRouter } from "next/navigation";
 
@@ -43,9 +42,6 @@ export function DashboardShell({
 
           <PicBottomNav />
         </div>
-
-        {/* PWA Install — fires native dialog automatically when browser is ready */}
-        <PwaInstallPrompt />
       </div>
     );
   }

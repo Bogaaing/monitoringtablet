@@ -9,6 +9,7 @@ import { authService } from "@/services/auth.service";
 import { tabletsService } from "@/services/tablets.service";
 import { inspectionsService, Inspection } from "@/services/inspections.service";
 import { User, InspectionPeriod } from "@/types";
+import { InstallAppCard } from "@/components/pic/install-app-card";
 import {
   QrCode,
   ArrowRight,
@@ -86,6 +87,9 @@ export default function PicDashboardPage() {
           Aktif
         </span>
       </div>
+
+      {/* ── 1.5 CUSTOM INSTALL APP CARD (PWA) ── */}
+      <InstallAppCard />
 
       {/* ── 2. PRIMARY ACTION: SCAN QR BUTTON ── */}
       <Link href="/pic/scan" className="block">
