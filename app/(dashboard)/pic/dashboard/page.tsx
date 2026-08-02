@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { dashboardService, PicDashboardStats } from "@/services/dashboard.service";
 import { authService } from "@/services/auth.service";
 import { User } from "@/types";
-import { Tablet, CheckCircle2, Clock, QrCode, ArrowRight, Activity, MapPin, Sparkles } from "lucide-react";
+import { QrCode, ArrowRight, Activity, MapPin } from "lucide-react";
 import Link from "next/link";
 
 export default function PicDashboardPage() {
@@ -33,25 +33,6 @@ export default function PicDashboardPage() {
 
   return (
     <div className="space-y-5 animate-in fade-in">
-      {/* Mobile Greeting Card */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/25 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-white/20 backdrop-blur-sm">
-            SUPERVISOR AREA
-          </span>
-          <span className="text-[10px] font-mono text-indigo-100 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-300" />
-            <span>PWA Active</span>
-          </span>
-        </div>
-
-        <h2 className="text-lg font-black tracking-tight leading-snug">
-          Selamat Datang, {currentUser?.name || "Ahmad Rizky"}!
-        </h2>
-        <p className="text-xs text-indigo-100 font-medium">
-          Lokasi Penugasan: <strong className="text-white">{currentUser?.location?.name || "Gudang Utama A"}</strong>
-        </p>
-      </div>
 
       {/* Hero Scan QR Button (Large 56px Touch Target for Mobile) */}
       <Link href="/pic/scan" className="block">

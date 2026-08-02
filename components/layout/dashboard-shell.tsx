@@ -44,8 +44,8 @@ export function DashboardShell({
           <PicBottomNav />
         </div>
 
-        {/* PWA Install Prompt — shows 1.5s after PIC enters the dashboard */}
-        <PwaInstallPrompt delay={1500} />
+        {/* PWA Install — fires native dialog automatically when browser is ready */}
+        <PwaInstallPrompt />
       </div>
     );
   }
