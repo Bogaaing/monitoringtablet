@@ -48,6 +48,7 @@ export async function updateSession(request: NextRequest) {
     let isAuthenticated = false;
     const isPlaceholder = supabaseUrl.includes("placeholder");
 
+    // 1. Check real Supabase Auth user first
     if (!isPlaceholder) {
       try {
         const {
@@ -85,13 +86,18 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // Fallback demo mode reading cookie (only if demo_role cookie is explicitly set)
-    if (!isAuthenticated) {
-      const demoRoleCookie = request.cookies.get("demo_role")?.value;
+    // 2. Demo mode reading cookie for protected dashboard routes
+    const demoRoleCookie = request.cookies.get("demo_role")?.value;
+
+    // If user is opening root / or /login without a real Supabase session, clear stale demo cookie
+    if (!isAuthenticated && (pathname === "/" || isAuthPage)) {
       if (demoRoleCookie) {
-        isAuthenticated = true;
-        userRole = demoRoleCookie;
+        response.cookies.delete("demo_role");
       }
+    } else if (!isAuthenticated && demoRoleCookie) {
+      // Allow demo role session when navigating protected routes (/admin, /pic, /manager)
+      isAuthenticated = true;
+      userRole = demoRoleCookie;
     }
 
     const getRoleDashboard = (role: string) => {
@@ -103,25 +109,25 @@ export async function updateSession(request: NextRequest) {
         case "manager":
           return "/manager/dashboard";
         default:
-          return "/dashboard";
+          return "/login";
       }
     };
 
-    // 1. Redirect unauthenticated users to /login
+    // Redirect unauthenticated users visiting protected routes to /login
     if (!isAuthenticated && !isAuthPage && !pathname.startsWith("/_next") && !pathname.startsWith("/api")) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
 
-    // 2. Redirect authenticated users away from Auth pages to their role dashboard
+    // Redirect authenticated users away from Auth pages to their assigned role dashboard
     if (isAuthenticated && isAuthPage) {
       const url = request.nextUrl.clone();
       url.pathname = getRoleDashboard(userRole || "admin");
       return NextResponse.redirect(url);
     }
 
-    // 3. Protect Role-Specific Routes
+    // Protect Role-Specific Routes
     if (isAuthenticated && userRole) {
       if (pathname.startsWith("/admin") && userRole !== "admin") {
         const url = request.nextUrl.clone();
@@ -142,7 +148,6 @@ export async function updateSession(request: NextRequest) {
       }
     }
   } catch (globalErr) {
-    // Fail-safe fallback so Vercel Edge Middleware never crashes
     console.error("Middleware fail-safe triggered:", globalErr);
   }
 
