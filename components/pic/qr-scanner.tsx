@@ -226,9 +226,9 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
       {/* ── 2. CAMERA SCANNER MODE ── */}
       {mode === "camera" && (
         <div className="w-full space-y-3">
-          {/* Viewfinder Container */}
-          <div className="relative w-full aspect-square rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center border-0">
-            {/* Video Stream target (Clean Html5Qrcode instance) */}
+          {/* Viewfinder Container (Square aspect ratio, 100% width) */}
+          <div className="relative w-full aspect-square rounded-3xl overflow-hidden bg-black shadow-2xl border-0">
+            {/* Video Stream Target */}
             <div
               id="qr-reader-video"
               className={`w-full h-full object-cover transition-transform duration-300 ${
@@ -236,86 +236,85 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
               }`}
             />
 
-            {/* Semi-transparent Overlay */}
-            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between p-6 bg-slate-950/40">
-              {/* Instruction Text */}
-              <div className="px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-bold text-center border border-white/10 shadow-lg">
+            {/* Dark Shading Overlay */}
+            <div className="absolute inset-0 bg-slate-950/40 pointer-events-none z-10" />
+
+            {/* Top Instruction Banner (Absolute Top Centered) */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none w-auto max-w-[90%] text-center">
+              <div className="px-3.5 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md text-white text-[11px] font-bold border border-white/10 shadow-lg truncate">
                 {scanStatus === "success"
                   ? "✓ QR Code berhasil ditemukan"
                   : "Arahkan QR Code ke dalam kotak untuk memulai pemindaian."}
               </div>
+            </div>
 
-              {/* Centered 260x260 Viewfinder Frame with Framer Motion GPU Acceleration */}
-              <motion.div
-                animate={
-                  scanStatus === "success"
-                    ? { scale: [1, 1.15, 1] }
-                    : { scale: [1, 1.08, 1] }
-                }
-                transition={
-                  scanStatus === "success"
-                    ? { duration: 0.3 }
-                    : {
-                        duration: 1.5,
-                        repeat: Infinity,
-                        repeatType: "reverse",
-                        ease: "easeInOut",
-                      }
-                }
-                className="relative w-[240px] h-[240px] xs:w-[260px] xs:h-[260px] my-auto flex items-center justify-center"
-              >
-                {/* 4 Corner Markers (32px length, 4px stroke, 16px radius, #6C5CE7) */}
-                <div
-                  className={`absolute top-0 left-0 w-[32px] h-[32px] border-t-[4px] border-l-[4px] rounded-tl-[16px] transition-all duration-300 ${cornerColorClass}`}
-                />
-                <div
-                  className={`absolute top-0 right-0 w-[32px] h-[32px] border-t-[4px] border-r-[4px] rounded-tr-[16px] transition-all duration-300 ${cornerColorClass}`}
-                />
-                <div
-                  className={`absolute bottom-0 left-0 w-[32px] h-[32px] border-b-[4px] border-l-[4px] rounded-bl-[16px] transition-all duration-300 ${cornerColorClass}`}
-                />
-                <div
-                  className={`absolute bottom-0 right-0 w-[32px] h-[32px] border-b-[4px] border-r-[4px] rounded-br-[16px] transition-all duration-300 ${cornerColorClass}`}
-                />
-
-                {/* Continuous Moving Scan Line (2s duration, easeInOut, infinite reverse, 80% width, #6C5CE7) */}
-                {scanStatus !== "success" && (
-                  <motion.div
-                    className="absolute left-1/2 -translate-x-1/2 h-[2px] w-[80%] rounded-full opacity-90 pointer-events-none"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, transparent 0%, #6C5CE7 35%, #60A5FA 50%, #6C5CE7 65%, transparent 100%)",
-                      boxShadow: "0 0 15px #6C5CE7, 0 0 8px #60A5FA",
-                    }}
-                    animate={{ y: [-105, 105, -105] }}
-                    transition={{
-                      duration: 2,
+            {/* PERFECTLY CENTERED 260x260 SCAN FRAME (Absolute 50% x 50% Center) */}
+            <motion.div
+              animate={
+                scanStatus === "success"
+                  ? { scale: [1, 1.15, 1] }
+                  : { scale: [1, 1.08, 1] }
+              }
+              transition={
+                scanStatus === "success"
+                  ? { duration: 0.3 }
+                  : {
+                      duration: 1.5,
                       repeat: Infinity,
                       repeatType: "reverse",
                       ease: "easeInOut",
-                    }}
-                  />
-                )}
+                    }
+              }
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[260px] h-[260px] z-20 pointer-events-none flex items-center justify-center overflow-hidden"
+            >
+              {/* 4 Purple Corner Markers (32px length, 4px stroke, 16px radius) */}
+              <div
+                className={`absolute top-0 left-0 w-[32px] h-[32px] border-t-[4px] border-l-[4px] rounded-tl-[16px] transition-all duration-300 ${cornerColorClass}`}
+              />
+              <div
+                className={`absolute top-0 right-0 w-[32px] h-[32px] border-t-[4px] border-r-[4px] rounded-tr-[16px] transition-all duration-300 ${cornerColorClass}`}
+              />
+              <div
+                className={`absolute bottom-0 left-0 w-[32px] h-[32px] border-b-[4px] border-l-[4px] rounded-bl-[16px] transition-all duration-300 ${cornerColorClass}`}
+              />
+              <div
+                className={`absolute bottom-0 right-0 w-[32px] h-[32px] border-b-[4px] border-r-[4px] rounded-br-[16px] transition-all duration-300 ${cornerColorClass}`}
+              />
 
-                {/* Success Banner Overlay inside Frame */}
-                {scanStatus === "success" && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex flex-col items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-emerald-950/80 backdrop-blur-md border border-emerald-400/60 text-emerald-300 text-xs font-black shadow-xl"
-                  >
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400 animate-bounce" />
-                    <span>✓ QR Code Terdeteksi</span>
-                  </motion.div>
-                )}
-              </motion.div>
+              {/* Continuous Moving Scan Line (80% width, bounded inside 260x260 frame) */}
+              {scanStatus !== "success" && (
+                <motion.div
+                  className="absolute left-1/2 -translate-x-1/2 h-[2px] w-[80%] rounded-full opacity-90 pointer-events-none"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent 0%, #6C5CE7 35%, #60A5FA 50%, #6C5CE7 65%, transparent 100%)",
+                    boxShadow: "0 0 15px #6C5CE7, 0 0 8px #60A5FA",
+                  }}
+                  animate={{ y: [-110, 110, -110] }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    repeatType: "reverse",
+                    ease: "easeInOut",
+                  }}
+                />
+              )}
 
-              {/* Bottom Spacer */}
-              <div className="h-2" />
-            </div>
+              {/* Success Banner Overlay inside Frame */}
+              {scanStatus === "success" && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex flex-col items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-emerald-950/85 backdrop-blur-md border border-emerald-400/60 text-emerald-300 text-xs font-black shadow-xl z-30"
+                >
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 animate-bounce" />
+                  <span>✓ QR Code Terdeteksi</span>
+                </motion.div>
+              )}
+            </motion.div>
 
-            {/* Floating Camera Control Buttons */}
+            {/* Floating Camera Control Buttons (Absolute Bottom Bar) */}
             <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-auto z-20">
               {/* Bottom Left: Flash Toggle */}
               <button
