@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchFilterBar } from "@/components/shared/search-filter-bar";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { TabletImportWizard } from "@/components/admin/tablet-import-wizard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -13,8 +15,21 @@ import { Input } from "@/components/ui/input";
 import { tabletsService } from "@/services/tablets.service";
 import { locationsService } from "@/services/locations.service";
 import { Tablet, Location, TabletStatus } from "@/types";
-import { Tablet as TabletIcon, Plus, Edit2, Trash2, X, QrCode } from "lucide-react";
+import {
+  Tablet as TabletIcon,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  QrCode,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  Printer,
+  CheckCircle2,
+} from "lucide-react";
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function AdminTabletsPage() {
   const [tablets, setTablets] = useState<Tablet[]>([]);
@@ -27,7 +42,14 @@ export default function AdminTabletsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  // Dialog states
+  // Import Wizard Modal state
+  const [isImportWizardOpen, setIsImportWizardOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Batch QR Modal state
+  const [isBatchQrOpen, setIsBatchQrOpen] = useState(false);
+
+  // Form Dialog states
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTablet, setEditingTablet] = useState<Tablet | null>(null);
   const [formData, setFormData] = useState({
@@ -44,6 +66,11 @@ export default function AdminTabletsPage() {
   // Delete state
   const [deletingTablet, setDeletingTablet] = useState<Tablet | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   const fetchLocations = async () => {
     try {
@@ -62,7 +89,7 @@ export default function AdminTabletsPage() {
         status: statusFilter,
         locationId: locationFilter,
         page: currentPage,
-        limit: 5,
+        limit: 10,
       });
       setTablets(res.data);
       setTotalPages(res.totalPages);
@@ -123,8 +150,10 @@ export default function AdminTabletsPage() {
     try {
       if (editingTablet) {
         await tabletsService.updateTablet(editingTablet.id, formData);
+        showToast("Data tablet berhasil diperbarui.");
       } else {
         await tabletsService.createTablet(formData);
+        showToast("Tablet baru berhasil ditambahkan.");
       }
       setIsFormOpen(false);
       fetchTablets();
@@ -140,6 +169,7 @@ export default function AdminTabletsPage() {
     setDeleteLoading(true);
     try {
       await tabletsService.softDeleteTablet(deletingTablet.id);
+      showToast(`Tablet ${deletingTablet.qr_code} berhasil dihapus.`);
       setDeletingTablet(null);
       fetchTablets();
     } catch (err) {
@@ -149,16 +179,134 @@ export default function AdminTabletsPage() {
     }
   };
 
+  // 1. Download Template Handler
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        "Tablet Code": "TAB001",
+        "Serial Number": "SN-001",
+        "Brand": "Samsung",
+        "Model": "Galaxy Tab A9",
+        "Location": "Gudang Utama A",
+        "Assigned PIC": "Ahmad Rizky (Kepala Regu)",
+        "Status": "Active",
+      },
+      {
+        "Tablet Code": "TAB002",
+        "Serial Number": "SN-002",
+        "Brand": "Apple",
+        "Model": "iPad 10th Gen",
+        "Location": "Area Packing 2",
+        "Assigned PIC": "",
+        "Status": "Maintenance",
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template Import Tablet");
+    XLSX.writeFile(wb, "tablet_import_template.xlsx");
+    showToast("Template Excel berhasil diunduh.");
+  };
+
+  // 2. Export Excel Handler
+  const handleExportExcel = async () => {
+    try {
+      const res = await tabletsService.getTablets({
+        search: searchQuery,
+        status: statusFilter,
+        locationId: locationFilter,
+        limit: 1000,
+      });
+
+      const exportData = res.data.map((t, idx) => ({
+        "No": idx + 1,
+        "Kode Tablet (QR)": t.qr_code,
+        "Serial Number": t.serial_number,
+        "Merk / Brand": t.brand || "-",
+        "Model Device": t.model || "-",
+        "Lokasi Penempatan": t.location?.name || "Belum Ditempatkan",
+        "Status Operasional": t.status.toUpperCase(),
+        "Tanggal Didaftarkan": new Date(t.created_at).toLocaleDateString("id-ID"),
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Inventaris Tablet");
+      XLSX.writeFile(wb, `Export_Inventaris_Tablet_${Date.now()}.xlsx`);
+      showToast("Data tablet berhasil diexport ke Excel.");
+    } catch (e) {
+      alert("Gagal mengunduh berkas Export Excel.");
+    }
+  };
+
+  // 3. Print Batch QR Codes
+  const handlePrintQrCodes = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-2xl shadow-2xl text-xs font-bold animate-in fade-in">
+          <CheckCircle2 className="h-4 w-4" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Page Header with Full Action Button Row */}
       <PageHeader
         title="Kelola Inventaris Tablet"
         description="Master data unit device tablet, kode QR, merk, model, dan lokasi penempatan."
       >
-        <Button onClick={handleOpenCreate} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-          <Plus className="h-4 w-4" />
-          <span>Tambah Tablet Baru</span>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Action 1: Add Tablet */}
+          <Button onClick={handleOpenCreate} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold">
+            <Plus className="h-4 w-4" />
+            <span>+ Add Tablet</span>
+          </Button>
+
+          {/* Action 2: Import Excel */}
+          <Button
+            onClick={() => setIsImportWizardOpen(true)}
+            variant="outline"
+            className="gap-1.5 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-xs font-bold"
+          >
+            <Upload className="h-4 w-4" />
+            <span>📥 Import Excel</span>
+          </Button>
+
+          {/* Action 3: Export Excel */}
+          <Button
+            onClick={handleExportExcel}
+            variant="outline"
+            className="gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold"
+          >
+            <Download className="h-4 w-4" />
+            <span>📤 Export Excel</span>
+          </Button>
+
+          {/* Action 4: Download Template */}
+          <Button
+            onClick={handleDownloadTemplate}
+            variant="ghost"
+            className="gap-1.5 text-slate-600 hover:text-indigo-600 text-xs font-medium"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            <span>📄 Download Template</span>
+          </Button>
+
+          {/* Action 5: Generate QR Batch */}
+          <Button
+            onClick={() => setIsBatchQrOpen(true)}
+            variant="outline"
+            className="gap-1.5 border-purple-200 text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950 text-xs font-bold"
+          >
+            <Printer className="h-4 w-4" />
+            <span>🖨 Generate QR</span>
+          </Button>
+        </div>
       </PageHeader>
 
       {/* Search & Filter Bar */}
@@ -182,6 +330,7 @@ export default function AdminTabletsPage() {
               { label: "Active", value: "active" },
               { label: "Maintenance", value: "maintenance" },
               { label: "Inactive", value: "inactive" },
+              { label: "Lost", value: "lost" },
             ],
           },
           {
@@ -292,14 +441,81 @@ export default function AdminTabletsPage() {
               currentPage={currentPage}
               totalPages={totalPages}
               totalRecords={totalRecords}
-              pageSize={5}
+              pageSize={10}
               onPageChange={(p) => setCurrentPage(p)}
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Form Modal Dialog */}
+      {/* Bulk Import Stepper Wizard Modal Component */}
+      <TabletImportWizard
+        isOpen={isImportWizardOpen}
+        onClose={() => setIsImportWizardOpen(false)}
+        onSuccess={() => {
+          showToast("Bulk import tablet berhasil dijalankan!");
+          fetchTablets();
+        }}
+      />
+
+      {/* Batch QR Code Generator Print Modal */}
+      {isBatchQrOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-4xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-purple-600 text-white shadow-md">
+                  <Printer className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
+                    Cetak Lembar Kode QR Tablet (Batch Print)
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Pratinjau lembaran cetak label steker Kode QR untuk penempelan fisik pada unit tablet.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button onClick={handlePrintQrCodes} className="bg-purple-600 hover:bg-purple-700 text-white font-bold gap-2 text-xs">
+                  <Printer className="h-4 w-4" />
+                  <span>Cetak / Print Label</span>
+                </Button>
+                <button
+                  onClick={() => setIsBatchQrOpen(false)}
+                  className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* QR Code Printable Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-900">
+              {tablets.map((tab) => (
+                <div
+                  key={tab.id}
+                  className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col items-center text-center space-y-2 shadow-sm"
+                >
+                  <QRCodeSVG value={tab.qr_code} size={110} level="H" />
+                  <span className="font-mono text-xs font-black text-slate-900 dark:text-slate-100">
+                    {tab.qr_code}
+                  </span>
+                  <div className="text-[10px] text-slate-500 font-medium">
+                    {tab.brand} {tab.model}
+                  </div>
+                  <span className="text-[9px] font-mono text-slate-400">
+                    SN: {tab.serial_number}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Single Add/Edit Form Modal Dialog */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-6 space-y-4 relative max-h-[90vh] overflow-y-auto">
@@ -414,6 +630,7 @@ export default function AdminTabletsPage() {
                   <option value="active">Active (Aktif Siap Pakai)</option>
                   <option value="maintenance">Maintenance (Perbaikan / Servis)</option>
                   <option value="inactive">Inactive (Tidak Aktif)</option>
+                  <option value="lost">Lost (Hilang)</option>
                 </select>
               </div>
 

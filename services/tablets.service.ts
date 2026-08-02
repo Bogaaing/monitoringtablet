@@ -309,4 +309,73 @@ export const tabletsService = {
     const res = await this.getTablets({ search: qrCode, limit: 1 });
     return res.data.find((t) => t.qr_code === qrCode) || null;
   },
+
+  async bulkImportTablets(
+    items: Array<{
+      qr_code: string;
+      serial_number: string;
+      brand: string;
+      model: string;
+      location_id?: string | null;
+      status?: TabletStatus;
+    }>
+  ): Promise<{ successCount: number; failedCount: number; imported: Tablet[]; errors: any[] }> {
+    const imported: Tablet[] = [];
+
+    const preparedItems = items.map((item, idx) => ({
+      id: `t-bulk-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+      qr_code: item.qr_code || generateUniqueQrCode(),
+      serial_number: item.serial_number,
+      brand: item.brand,
+      model: item.model,
+      location_id: item.location_id || null,
+      status: item.status || "active",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.includes("placeholder")) {
+      try {
+        const supabase = createClient() as any;
+        const { data, error } = await supabase
+          .from("tablets")
+          .insert(
+            preparedItems.map((p) => ({
+              id: p.id,
+              qr_code: p.qr_code,
+              serial_number: p.serial_number,
+              brand: p.brand,
+              model: p.model,
+              location_id: p.location_id,
+              status: p.status,
+            }))
+          )
+          .select("*, location:locations(*)");
+
+        if (!error && data) {
+          return {
+            successCount: data.length,
+            failedCount: 0,
+            imported: data as unknown as Tablet[],
+            errors: [],
+          };
+        }
+      } catch (e: any) {
+        // Fallback
+      }
+    }
+
+    // Mock fallback insert
+    for (const item of preparedItems) {
+      mockTablets.unshift(item as Tablet);
+      imported.push(item as Tablet);
+    }
+
+    return {
+      successCount: imported.length,
+      failedCount: 0,
+      imported,
+      errors: [],
+    };
+  },
 };

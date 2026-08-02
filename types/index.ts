@@ -1,6 +1,6 @@
 export type Role = 'admin' | 'pic' | 'manager';
 
-export type TabletStatus = 'active' | 'maintenance' | 'inactive';
+export type TabletStatus = 'active' | 'maintenance' | 'inactive' | 'lost';
 
 export type InspectionStatus = 'pending' | 'approved' | 'rejected';
 
