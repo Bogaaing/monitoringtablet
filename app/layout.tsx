@@ -47,10 +47,16 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="TabMonitor" />
         <meta name="theme-color" content="#473bf0" />
-        {/* Capture beforeinstallprompt BEFORE React hydrates to prevent race condition */}
+        {/* Register Service Worker & capture beforeinstallprompt BEFORE React hydrates */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .catch(function(err) { console.warn('[SW] Reg failed:', err); });
+                });
+              }
               window.__pwaPrompt = null;
               window.addEventListener('beforeinstallprompt', function(e) {
                 e.preventDefault();

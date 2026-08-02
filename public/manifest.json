@@ -1,8 +1,9 @@
 {
+  "id": "/",
   "name": "TabMonitor — Sistem Monitoring Tablet",
   "short_name": "TabMonitor",
   "description": "Aplikasi Progressive Web App Monitoring & Inspeksi Tablet Bulanan untuk Supervisor (PIC)",
-  "start_url": "/pic/dashboard",
+  "start_url": "/login?mode=standalone",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -10,7 +11,6 @@
   "orientation": "portrait-primary",
   "lang": "id",
   "categories": ["productivity", "utilities"],
-  "screenshots": [],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
