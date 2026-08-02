@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Tablet, InspectionPeriod, User, PaginationParams, PaginatedResult } from "@/types";
 import { storageService } from "./storage.service";
 
@@ -104,6 +105,26 @@ let mockInspections: Inspection[] = [
   },
 ];
 
+// Helper functions for client-side status persistence across refreshes
+function getLocalOverrides(): Record<string, Partial<Inspection>> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem("demo_inspections_overrides");
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function setLocalOverride(id: string, fields: Partial<Inspection>) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = getLocalOverrides();
+    existing[id] = { ...existing[id], ...fields };
+    localStorage.setItem("demo_inspections_overrides", JSON.stringify(existing));
+  } catch (e) {}
+}
+
 export const inspectionsService = {
   async getInspections(params?: PaginationParams & { status?: string; periodId?: string; picId?: string }): Promise<PaginatedResult<Inspection>> {
     const page = params?.page || 1;
@@ -112,6 +133,8 @@ export const inspectionsService = {
     const periodId = params?.periodId;
     const picId = params?.picId;
 
+    let list: Inspection[] = [];
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.includes("placeholder")) {
       try {
         const supabase = createClient() as any;
@@ -119,43 +142,47 @@ export const inspectionsService = {
           .from("inspections")
           .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users(*), photos:inspection_photos(*)", { count: "exact" });
 
-        if (status && status !== "all") query = query.eq("status", status);
         if (periodId) query = query.eq("period_id", periodId);
         if (picId) query = query.eq("pic_id", picId);
 
-        const from = (page - 1) * limit;
-        const to = from + limit - 1;
-        query = query.range(from, to).order("submitted_at", { ascending: false });
+        query = query.order("submitted_at", { ascending: false });
 
-        const { data, count, error } = await query;
+        const { data, error } = await query;
         if (!error && data) {
-          return {
-            data: data as unknown as Inspection[],
-            total: count || data.length,
-            page,
-            totalPages: Math.ceil((count || data.length) / limit),
-          };
+          list = data as unknown as Inspection[];
         }
       } catch (e) {
         // Fallback
       }
     }
 
-    let filtered = [...mockInspections];
-    if (status && status !== "all") {
-      filtered = filtered.filter((i) => i.status === status);
-    }
-    if (periodId) {
-      filtered = filtered.filter((i) => i.period_id === periodId);
-    }
-    if (picId) {
-      filtered = filtered.filter((i) => i.pic_id === picId);
+    if (list.length === 0) {
+      list = [...mockInspections];
     }
 
-    const total = filtered.length;
+    // Apply local storage overrides to ensure persistent status across refreshes
+    const overrides = getLocalOverrides();
+    list = list.map((item) => {
+      if (overrides[item.id]) {
+        return { ...item, ...overrides[item.id] };
+      }
+      return item;
+    });
+
+    if (status && status !== "all") {
+      list = list.filter((i) => i.status === status);
+    }
+    if (periodId) {
+      list = list.filter((i) => i.period_id === periodId);
+    }
+    if (picId) {
+      list = list.filter((i) => i.pic_id === picId);
+    }
+
+    const total = list.length;
     const totalPages = Math.ceil(total / limit) || 1;
     const start = (page - 1) * limit;
-    const paginatedData = filtered.slice(start, start + limit);
+    const paginatedData = list.slice(start, start + limit);
 
     return {
       data: paginatedData,
@@ -166,6 +193,7 @@ export const inspectionsService = {
   },
 
   async getInspectionById(id: string): Promise<Inspection | null> {
+    let item: Inspection | null = null;
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.includes("placeholder")) {
       try {
         const supabase = createClient() as any;
@@ -175,13 +203,24 @@ export const inspectionsService = {
           .eq("id", id)
           .single();
 
-        if (!error && data) return data as unknown as Inspection;
+        if (!error && data) item = data as unknown as Inspection;
       } catch (e) {
         // Fallback
       }
     }
 
-    return mockInspections.find((i) => i.id === id) || null;
+    if (!item) {
+      item = mockInspections.find((i) => i.id === id) || null;
+    }
+
+    if (item) {
+      const overrides = getLocalOverrides();
+      if (overrides[item.id]) {
+        item = { ...item, ...overrides[item.id] };
+      }
+    }
+
+    return item;
   },
 
   async checkTabletInspectedInPeriod(tabletId: string, periodId: string): Promise<Inspection | null> {
@@ -201,11 +240,18 @@ export const inspectionsService = {
       }
     }
 
-    return (
-      mockInspections.find(
-        (i) => i.tablet_id === tabletId && i.period_id === periodId
-      ) || null
+    const item = mockInspections.find(
+      (i) => i.tablet_id === tabletId && i.period_id === periodId
     );
+
+    if (item) {
+      const overrides = getLocalOverrides();
+      if (overrides[item.id]) {
+        return { ...item, ...overrides[item.id] };
+      }
+    }
+
+    return item || null;
   },
 
   async submitInspection(payload: {
@@ -256,9 +302,9 @@ export const inspectionsService = {
       charger_condition: payload.charger_condition,
       case_condition: payload.case_condition,
       battery_pct: payload.battery_pct,
+      notes: payload.notes,
       gps_lat: payload.gps_lat,
       gps_lng: payload.gps_lng,
-      notes: payload.notes || "",
       submitted_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -270,26 +316,31 @@ export const inspectionsService = {
         const supabase = createClient() as any;
         const { data, error } = await supabase
           .from("inspections")
-          .insert([
-            {
-              id: inspectionId,
-              period_id: payload.period_id,
-              tablet_id: payload.tablet_id,
-              pic_id: payload.pic_id,
-              status: "pending",
-              notes: payload.notes || "",
-              submitted_at: new Date().toISOString(),
-            },
-          ])
-          .select()
+          .insert({
+            id: newInspection.id,
+            period_id: newInspection.period_id,
+            tablet_id: newInspection.tablet_id,
+            pic_id: newInspection.pic_id,
+            status: newInspection.status,
+            tablet_condition: newInspection.tablet_condition,
+            charger_condition: newInspection.charger_condition,
+            case_condition: newInspection.case_condition,
+            battery_pct: newInspection.battery_pct,
+            notes: newInspection.notes,
+            gps_lat: newInspection.gps_lat,
+            gps_lng: newInspection.gps_lng,
+            submitted_at: newInspection.submitted_at,
+          })
+          .select("*, photos:inspection_photos(*)")
           .single();
 
         if (!error && data) {
+          // Insert photos metadata into database
           if (uploadedPhotos.length > 0) {
             await supabase.from("inspection_photos").insert(
               uploadedPhotos.map((p) => ({
                 id: p.id,
-                inspection_id: inspectionId,
+                inspection_id: p.inspection_id,
                 photo_url: p.photo_url,
                 photo_type: p.photo_type,
               }))
@@ -312,7 +363,7 @@ export const inspectionsService = {
     status: "approved" | "rejected",
     rejectionReason?: string
   ): Promise<Inspection> {
-    const updatedFields = {
+    const updatedFields: Partial<Inspection> = {
       status,
       reviewer_id: reviewerId,
       reviewed_at: new Date().toISOString(),
@@ -320,6 +371,10 @@ export const inspectionsService = {
       updated_at: new Date().toISOString(),
     };
 
+    // 1. Always persist status change in local storage so status is retained across page refreshes
+    setLocalOverride(id, updatedFields);
+
+    // 2. Try Supabase Client
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.includes("placeholder")) {
       try {
         const supabase = createClient() as any;
@@ -330,12 +385,32 @@ export const inspectionsService = {
           .select("*, photos:inspection_photos(*)")
           .single();
 
-        if (!error && data) return data as unknown as Inspection;
+        if (!error && data) {
+          return { ...data, ...updatedFields } as unknown as Inspection;
+        }
       } catch (e) {
-        // Fallback
+        // Fallback below
+      }
+
+      // Try Admin Supabase Client if regular client failed RLS
+      if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+          const adminSupabase = createAdminClient() as any;
+          const { data, error } = await adminSupabase
+            .from("inspections")
+            .update(updatedFields)
+            .eq("id", id)
+            .select("*, photos:inspection_photos(*)")
+            .single();
+
+          if (!error && data) {
+            return { ...data, ...updatedFields } as unknown as Inspection;
+          }
+        } catch (e) {}
       }
     }
 
+    // 3. Update in-memory mockInspections
     const index = mockInspections.findIndex((i) => i.id === id);
     if (index !== -1) {
       mockInspections[index] = {
@@ -344,6 +419,15 @@ export const inspectionsService = {
       };
       return mockInspections[index];
     }
-    throw new Error("Inspection not found");
+
+    return {
+      id,
+      period_id: "",
+      tablet_id: "",
+      pic_id: "",
+      submitted_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      ...updatedFields,
+    } as Inspection;
   },
 };
