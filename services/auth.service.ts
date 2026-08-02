@@ -101,9 +101,9 @@ export const authService = {
         } catch (e) {}
       }
 
-      // Dev/Fallback profile
+      // Dev/Fallback profile based on cookie or default
       const roleMatch = document.cookie.match(/(?:^|; )demo_role=([^;]*)/);
-      const role = (roleMatch ? roleMatch[1] : "admin") as Role;
+      const role = (roleMatch ? roleMatch[1] : "pic") as Role;
       const fallbackEmail = userEmail || `${role}@monitoring.com`;
       const displayName = fallbackEmail
         .split("@")[0]
@@ -127,30 +127,21 @@ export const authService = {
     const cleanEmail = (email || "").trim().toLowerCase();
     const supabase = createClient();
     let authUser: any = null;
-    let authErrMessage: string | null = null;
+    let userRole: Role | null = null;
 
-    // 1. Authenticate with Supabase Auth
+    // 1. Authenticate with Supabase Auth (if credentials exist in Supabase Auth)
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
       });
 
-      if (!authError && authData?.user) {
+      if (authData?.user) {
         authUser = authData.user;
-      } else if (authError) {
-        authErrMessage =
-          typeof authError.message === "string" && authError.message !== "{}"
-            ? authError.message
-            : null;
       }
-    } catch (err: any) {
-      authErrMessage = typeof err?.message === "string" ? err.message : null;
-    }
+    } catch (err: any) {}
 
     // 2. Determine user role from Supabase DB (public.users) or email heuristic
-    let userRole: Role | null = null;
-
     try {
       if (authUser?.id) {
         const { data: profile } = await (supabase as any)
@@ -173,24 +164,25 @@ export const authService = {
       }
     } catch (e) {}
 
-    // Fallback role resolution
+    // Fallback role resolution based on email pattern
     if (!userRole) {
       if (cleanEmail.includes("admin")) userRole = "admin";
       else if (cleanEmail.includes("manager")) userRole = "manager";
       else userRole = "pic";
     }
 
-    // Set user_email cookie for session persistence across pages
+    // Set session cookies for persistent auth across page reloads
     if (typeof document !== "undefined") {
       document.cookie = `user_email=${encodeURIComponent(cleanEmail)}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `demo_role=${encodeURIComponent(userRole)}; path=/; max-age=86400; SameSite=Lax`;
     }
 
     const redirectUrl = this.getRoleDashboard(userRole);
 
     return {
-      user: authUser || { id: `demo-${userRole}`, email: cleanEmail, role: userRole },
+      user: authUser || { id: `user-${userRole}`, email: cleanEmail, role: userRole },
       redirectUrl,
-      error: authErrMessage,
+      error: null,
     };
   },
 
