@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { QRScanner } from "@/components/pic/qr-scanner";
 import { InspectionForm } from "@/components/pic/inspection-form";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { tabletsService } from "@/services/tablets.service";
 import { periodsService } from "@/services/periods.service";
@@ -17,13 +17,9 @@ import {
   QrCode,
   CheckCircle2,
   AlertTriangle,
-  ArrowRight,
   RefreshCw,
   History,
   LayoutDashboard,
-  Tablet as TabletIcon,
-  MapPin,
-  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -51,17 +47,17 @@ export default function PicScanPage() {
       autoTriggered.current = true;
       handleScanSuccess(qrParam);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const handleScanSuccess = async (qrCode: string) => {
+  const handleScanSuccess = async (qrCode: string, tabletData?: Tablet) => {
     setStep("validating");
     setErrorMessage(null);
     setLoading(true);
 
     try {
-      // 1. Fetch tablet details
-      const tablet = await tabletsService.getTabletByQr(qrCode);
+      // 1. Fetch tablet details if not provided directly
+      const tablet = tabletData || (await tabletsService.getTabletByQr(qrCode));
       if (!tablet) {
         setErrorMessage(`QR Code "${qrCode}" tidak terdaftar dalam sistem inventaris.`);
         setStep("scan");
@@ -133,7 +129,6 @@ export default function PicScanPage() {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto">
-
       {errorMessage && (
         <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-sm font-semibold flex items-center justify-between animate-in fade-in">
           <div className="flex items-center gap-2">
@@ -146,19 +141,21 @@ export default function PicScanPage() {
         </div>
       )}
 
-      {/* Step 1: Scan Mode */}
+      {/* Step 1: Enterprise Camera / Manual QR Scanner */}
       {step === "scan" && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <QRScanner onScanSuccess={handleScanSuccess} />
         </div>
       )}
 
       {/* Step 2: Validating */}
       {step === "validating" && (
-        <Card className="p-12 text-center">
+        <Card className="p-12 text-center rounded-3xl border-slate-200 dark:border-slate-800">
           <CardContent className="space-y-4 pt-6">
             <RefreshCw className="h-8 w-8 text-indigo-600 animate-spin mx-auto" />
-            <h3 className="text-base font-bold">Memvalidasi Kode QR & Memeriksa Data Tablet...</h3>
+            <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
+              Memvalidasi Kode QR & Memeriksa Data Tablet...
+            </h3>
             <p className="text-xs text-slate-500">Mohon tunggu sebentar.</p>
           </CardContent>
         </Card>
@@ -166,9 +163,9 @@ export default function PicScanPage() {
 
       {/* Step 3: Already Inspected Warning */}
       {step === "already_inspected" && scannedTablet && (
-        <Card className="border-amber-200 dark:border-amber-900 shadow-xl overflow-hidden">
+        <Card className="border-amber-200 dark:border-amber-900 shadow-xl overflow-hidden rounded-3xl">
           <CardHeader className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-100 dark:border-amber-900/50">
-            <CardTitle className="text-base text-amber-700 dark:text-amber-300 flex items-center gap-2">
+            <CardTitle className="text-base text-amber-700 dark:text-amber-300 flex items-center gap-2 font-black">
               <AlertTriangle className="h-5 w-5" />
               <span>Tablet Sudah Diinspeksi Periode Ini</span>
             </CardTitle>
@@ -178,7 +175,7 @@ export default function PicScanPage() {
               Tablet <span className="font-mono font-bold text-indigo-600">{scannedTablet.qr_code}</span> ({scannedTablet.model}) sudah pernah di-inspeksi pada periode <span className="font-bold">{activePeriod?.name}</span>.
             </p>
 
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-500">Status Review:</span>
                 <StatusBadge status={existingInspection?.status || "pending"} />
@@ -196,13 +193,13 @@ export default function PicScanPage() {
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Button
                 onClick={() => setStep("scan")}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 font-bold gap-2"
+                className="flex-1 bg-[#473bf0] hover:bg-indigo-700 font-extrabold gap-2 rounded-xl h-11"
               >
                 <QrCode className="h-4 w-4" />
                 <span>Scan Tablet Lain</span>
               </Button>
               <Link href="/pic/inspections" className="flex-1">
-                <Button variant="outline" className="w-full gap-2 font-bold">
+                <Button variant="outline" className="w-full gap-2 font-bold rounded-xl h-11 border-slate-300">
                   <History className="h-4 w-4" />
                   <span>Lihat Riwayat Inspeksi</span>
                 </Button>
@@ -225,14 +222,14 @@ export default function PicScanPage() {
 
       {/* Step 5: Success Screen */}
       {step === "success" && (
-        <Card className="border-emerald-200 dark:border-emerald-950 shadow-2xl overflow-hidden animate-in zoom-in-95">
+        <Card className="border-emerald-200 dark:border-emerald-950 shadow-2xl overflow-hidden rounded-3xl animate-in zoom-in-95">
           <CardContent className="p-8 text-center space-y-6">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center mx-auto shadow-inner">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300 flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 className="h-10 w-10" />
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
                 Inspeksi Berhasil Dikirimkan!
               </h2>
               <p className="text-sm text-slate-500 max-w-md mx-auto">
@@ -244,21 +241,21 @@ export default function PicScanPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 max-w-lg mx-auto">
               <Button
                 onClick={() => setStep("scan")}
-                className="bg-indigo-600 hover:bg-indigo-700 font-bold gap-2"
+                className="bg-[#473bf0] hover:bg-indigo-700 font-extrabold gap-2 rounded-xl h-11"
               >
                 <QrCode className="h-4 w-4" />
                 <span>Scan Tablet Berikutnya</span>
               </Button>
 
               <Link href="/pic/inspections" className="block">
-                <Button variant="outline" className="w-full gap-2 font-semibold">
+                <Button variant="outline" className="w-full gap-2 font-bold rounded-xl h-11 border-slate-300">
                   <History className="h-4 w-4" />
                   <span>Riwayat Inspeksi</span>
                 </Button>
               </Link>
 
               <Link href="/pic/dashboard" className="block">
-                <Button variant="ghost" className="w-full gap-2 font-semibold text-slate-600">
+                <Button variant="ghost" className="w-full gap-2 font-semibold text-slate-600 h-11">
                   <LayoutDashboard className="h-4 w-4" />
                   <span>Kembali Dashboard</span>
                 </Button>
