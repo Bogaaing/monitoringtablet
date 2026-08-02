@@ -7,12 +7,11 @@ export function InstallAppCard() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
-  const [isSupported, setIsSupported] = useState<boolean>(false);
   const [showToast, setShowToast] = useState<boolean>(false);
   const [installing, setInstalling] = useState<boolean>(false);
 
   useEffect(() => {
-    // 1. Register Service Worker for PWA support
+    // 1. Register Service Worker for PWA installability
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
@@ -20,8 +19,8 @@ export function InstallAppCard() {
         .catch((err) => console.warn("[InstallAppCard] SW reg error:", err));
     }
 
-    // 2. Check if running in standalone mode or already installed permanently
-    const checkStandalone = () => {
+    // 2. Check standalone / installed state
+    const checkInstalledState = () => {
       if (typeof window === "undefined") return false;
       const isStandaloneMode =
         window.matchMedia("(display-mode: standalone)").matches ||
@@ -31,12 +30,12 @@ export function InstallAppCard() {
       return isStandaloneMode || permanentlyInstalled;
     };
 
-    if (checkStandalone()) {
+    if (checkInstalledState()) {
       setIsInstalled(true);
       return;
     }
 
-    // 3. Check session dismissal state
+    // 3. Check session dismissal
     const sessionDismissed =
       typeof window !== "undefined" &&
       sessionStorage.getItem("pwa-install-dismissed-session") === "true";
@@ -45,34 +44,31 @@ export function InstallAppCard() {
       setIsDismissed(true);
     }
 
-    // 4. Check browser support for BeforeInstallPrompt
-    const checkBrowserSupport = () => {
-      if (typeof window === "undefined") return false;
-      const hasOnBeforeInstall = "onbeforeinstallprompt" in window;
-      const hasGlobalPrompt = !!(window as any).__pwaPrompt;
-      const isChromium = /Chrome|Edg|OPR|Android/i.test(navigator.userAgent);
-      return hasOnBeforeInstall || hasGlobalPrompt || isChromium;
+    // 4. Capture beforeinstallprompt event (from global layout script or state)
+    const updatePrompt = () => {
+      if (typeof window !== "undefined" && (window as any).__pwaPrompt) {
+        setDeferredPrompt((window as any).__pwaPrompt);
+      }
     };
 
-    setIsSupported(checkBrowserSupport());
+    updatePrompt();
 
-    // 5. Check globally captured prompt from layout script
-    if (typeof window !== "undefined" && (window as any).__pwaPrompt) {
-      setDeferredPrompt((window as any).__pwaPrompt);
-    }
+    // Check periodically in first 5 seconds in case browser fires beforeinstallprompt after hydration
+    const intervalId = setInterval(updatePrompt, 500);
+    const timeoutId = setTimeout(() => clearInterval(intervalId), 5000);
 
-    // 6. Listen for beforeinstallprompt event
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
       (window as any).__pwaPrompt = e;
-      setIsSupported(true);
     };
 
-    // 7. Listen for appinstalled event
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
+      if (typeof window !== "undefined") {
+        (window as any).__pwaPrompt = null;
+      }
       localStorage.setItem("pwa-installed", "true");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
@@ -82,6 +78,8 @@ export function InstallAppCard() {
     window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
@@ -91,30 +89,28 @@ export function InstallAppCard() {
     const promptEvent =
       deferredPrompt || (typeof window !== "undefined" && (window as any).__pwaPrompt);
 
-    if (promptEvent) {
-      setInstalling(true);
-      try {
-        await promptEvent.prompt();
-        const choiceResult = await promptEvent.userChoice;
+    if (!promptEvent) return;
 
-        if (choiceResult && choiceResult.outcome === "accepted") {
-          setIsInstalled(true);
-          localStorage.setItem("pwa-installed", "true");
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 4000);
-        }
-      } catch (err) {
-        console.warn("[InstallAppCard] Install prompt error:", err);
-      } finally {
-        setDeferredPrompt(null);
-        if (typeof window !== "undefined") {
-          (window as any).__pwaPrompt = null;
-        }
-        setInstalling(false);
+    setInstalling(true);
+    try {
+      // Direct execution of native browser installation prompt
+      await promptEvent.prompt();
+      const choiceResult = await promptEvent.userChoice;
+
+      if (choiceResult && choiceResult.outcome === "accepted") {
+        setIsInstalled(true);
+        localStorage.setItem("pwa-installed", "true");
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 4000);
       }
-    } else {
-      // Fallback message if native prompt is unavailable in current dev browser session
-      alert("Untuk menginstall: Ketuk menu browser (⋮ atau ⎘) lalu pilih 'Tambah ke Layar Utama' / 'Install App'.");
+    } catch (err) {
+      console.warn("[InstallAppCard] Install error:", err);
+    } finally {
+      setDeferredPrompt(null);
+      if (typeof window !== "undefined") {
+        (window as any).__pwaPrompt = null;
+      }
+      setInstalling(false);
     }
   };
 
@@ -123,7 +119,6 @@ export function InstallAppCard() {
     sessionStorage.setItem("pwa-install-dismissed-session", "true");
   };
 
-  // Toast notification when installed
   const renderToast = () => {
     if (!showToast) return null;
     return (
@@ -136,9 +131,16 @@ export function InstallAppCard() {
     );
   };
 
-  // Condition check:
-  // Do not display if app is running in standalone mode (isInstalled), or user dismissed in current session, or browser does not support BeforeInstallPrompt
-  if (isInstalled || isDismissed || !isSupported) {
+  // Active prompt event reference
+  const activePrompt =
+    deferredPrompt || (typeof window !== "undefined" && (window as any).__pwaPrompt);
+
+  // Display conditions according to requirements:
+  // - User role PIC (placed on PIC dashboard)
+  // - Application is NOT already installed (standalone mode / localStorage)
+  // - Browser supports / has captured BeforeInstallPrompt event
+  // - User has not dismissed in current session
+  if (isInstalled || isDismissed || !activePrompt) {
     return renderToast();
   }
 
