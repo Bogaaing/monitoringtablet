@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Tablet, InspectionPeriod, User, PaginationParams, PaginatedResult } from "@/types";
 import { storageService } from "./storage.service";
+import { tabletsService } from "./tablets.service";
+import { usersService } from "./users.service";
+import { periodsService } from "./periods.service";
 
 export type InspectionStatus = "pending" | "approved" | "rejected";
 export type PhotoType = "front" | "back" | "screen" | "accessory";
@@ -58,7 +61,7 @@ export const inspectionsService = {
       const supabase = createClient() as any;
       let query = supabase
         .from("inspections")
-        .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users(*), reviewer:users(*), photos:inspection_photos(*)", { count: "exact" });
+        .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users!pic_id(*), reviewer:users!reviewer_id(*), photos:inspection_photos(*)", { count: "exact" });
 
       if (status && status !== "all") query = query.eq("status", status);
       if (periodId && periodId !== "all") query = query.eq("period_id", periodId);
@@ -74,7 +77,7 @@ export const inspectionsService = {
           const adminSupabase = createAdminClient() as any;
           let adminQuery = adminSupabase
             .from("inspections")
-            .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users(*), reviewer:users(*), photos:inspection_photos(*)", { count: "exact" });
+            .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users!pic_id(*), reviewer:users!reviewer_id(*), photos:inspection_photos(*)", { count: "exact" });
 
           if (status && status !== "all") adminQuery = adminQuery.eq("status", status);
           if (periodId && periodId !== "all") adminQuery = adminQuery.eq("period_id", periodId);
@@ -82,12 +85,64 @@ export const inspectionsService = {
 
           adminQuery = adminQuery.range(from, to).order("submitted_at", { ascending: false });
           const res = await adminQuery;
-          if (!res.error && res.data) {
+          if (!res.error && res.data && res.data.length > 0) {
             data = res.data;
             count = res.count;
             error = null;
           }
         } catch (adminErr) {}
+      }
+
+      // Fallback: Simple select without relational joins if relationship mapping failed
+      if (error || !data || data.length === 0) {
+        try {
+          let simpleQuery = supabase
+            .from("inspections")
+            .select("*, photos:inspection_photos(*)", { count: "exact" });
+
+          if (status && status !== "all") simpleQuery = simpleQuery.eq("status", status);
+          if (periodId && periodId !== "all") simpleQuery = simpleQuery.eq("period_id", periodId);
+          if (picId && picId !== "all" && picId.trim() !== "") simpleQuery = simpleQuery.eq("pic_id", picId);
+
+          simpleQuery = simpleQuery.range(from, to).order("submitted_at", { ascending: false });
+          const simpleRes = await simpleQuery;
+
+          let rawData = simpleRes.data;
+
+          if (simpleRes.error && typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            const adminSupabase = createAdminClient() as any;
+            let adminSimpleQuery = adminSupabase
+              .from("inspections")
+              .select("*, photos:inspection_photos(*)", { count: "exact" });
+
+            if (status && status !== "all") adminSimpleQuery = adminSimpleQuery.eq("status", status);
+            if (periodId && periodId !== "all") adminSimpleQuery = adminSimpleQuery.eq("period_id", periodId);
+            if (picId && picId !== "all" && picId.trim() !== "") adminSimpleQuery = adminSimpleQuery.eq("pic_id", picId);
+
+            adminSimpleQuery = adminSimpleQuery.range(from, to).order("submitted_at", { ascending: false });
+            const adminSimpleRes = await adminSimpleQuery;
+            if (!adminSimpleRes.error && adminSimpleRes.data) {
+              rawData = adminSimpleRes.data;
+            }
+          }
+
+          if (rawData && rawData.length > 0) {
+            const [tabletsList, usersList, periodsList] = await Promise.all([
+              tabletsService.getTablets({ limit: 100 }),
+              usersService.getUsers({ limit: 100 }),
+              periodsService.getAllPeriods(),
+            ]);
+
+            data = rawData.map((ins: any) => ({
+              ...ins,
+              tablet: tabletsList.data.find((t) => t.id === ins.tablet_id),
+              pic: usersList.data.find((u) => u.id === ins.pic_id),
+              period: periodsList.find((p) => p.id === ins.period_id),
+            }));
+            count = rawData.length;
+            error = null;
+          }
+        } catch (fbErr) {}
       }
 
       if (!error && data) {
@@ -115,7 +170,7 @@ export const inspectionsService = {
       const supabase = createClient() as any;
       const { data, error } = await supabase
         .from("inspections")
-        .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users(*), reviewer:users(*), photos:inspection_photos(*)")
+        .select("*, period:inspection_periods(*), tablet:tablets(*, location:locations(*)), pic:users!pic_id(*), reviewer:users!reviewer_id(*), photos:inspection_photos(*)")
         .eq("id", id)
         .single();
 
