@@ -136,24 +136,23 @@ export const usersService = {
         .select("*, location:locations(*)")
         .single();
 
-      if (!error && data) return data as unknown as User;
-      if (error) console.error("createUser Supabase error:", error);
-    } catch (e) {
+      if (!error && data) {
+        return data as unknown as User;
+      }
+
+      if (error) {
+        console.error("createUser Supabase error:", error);
+        if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
+          throw new Error(`Email '${cleanEmail}' sudah terdaftar di sistem. Silakan gunakan alamat email lain.`);
+        }
+        throw new Error(error.message || "Gagal menambahkan pengguna ke database Supabase.");
+      }
+    } catch (e: any) {
+      if (e.message && (e.message.includes("terdaftar") || e.message.includes("Gagal"))) {
+        throw e;
+      }
       console.error("createUser exception:", e);
-    }
-
-    // Retry with Admin Client if standard client failed
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { data, error } = await adminSupabase
-          .from("users")
-          .insert([insertPayload])
-          .select("*, location:locations(*)")
-          .single();
-
-        if (!error && data) return data as unknown as User;
-      } catch (e) {}
+      throw new Error(e.message || "Terjadi kesalahan jaringan saat menghubungi server Supabase.");
     }
 
     throw new Error("Gagal menambahkan pengguna ke database Supabase.");
@@ -174,6 +173,8 @@ export const usersService = {
       updated_at: new Date().toISOString(),
     };
 
+    if (payload.email) updateData.email = payload.email.trim().toLowerCase();
+    if (payload.name) updateData.name = payload.name.trim();
     if (payload.location_id !== undefined) {
       updateData.location_id = payload.location_id && payload.location_id.trim() !== "" ? payload.location_id.trim() : null;
     }
@@ -188,20 +189,15 @@ export const usersService = {
         .single();
 
       if (!error && data) return data as unknown as User;
-    } catch (e) {}
 
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { data, error } = await adminSupabase
-          .from("users")
-          .update(updateData)
-          .eq("id", id)
-          .select("*, location:locations(*)")
-          .single();
-
-        if (!error && data) return data as unknown as User;
-      } catch (e) {}
+      if (error) {
+        if (error.code === "23505" || error.message?.includes("unique")) {
+          throw new Error(`Email '${updateData.email}' sudah terdaftar oleh pengguna lain.`);
+        }
+        throw new Error(error.message || "Gagal memperbarui pengguna di Supabase.");
+      }
+    } catch (e: any) {
+      if (e.message && (e.message.includes("terdaftar") || e.message.includes("Gagal"))) throw e;
     }
 
     throw new Error("Gagal memperbarui pengguna di Supabase.");
@@ -217,18 +213,6 @@ export const usersService = {
 
       if (!error) return true;
     } catch (e) {}
-
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { error } = await adminSupabase
-          .from("users")
-          .update({ deleted_at: new Date().toISOString() })
-          .eq("id", id);
-
-        if (!error) return true;
-      } catch (e) {}
-    }
 
     return false;
   },
