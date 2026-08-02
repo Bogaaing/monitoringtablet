@@ -82,7 +82,7 @@ export default function PicProfilePage() {
                 <span>Lokasi Penugasan</span>
               </span>
               <span className="font-bold text-slate-800 dark:text-slate-200">
-                {currentUser?.location?.name || "Gudang Utama A"}
+                {currentUser?.location?.name || "Belum Ada Penugasan Lokasi"}
               </span>
             </div>
 

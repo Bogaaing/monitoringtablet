@@ -75,7 +75,7 @@ export function PicMobileHeader({ user }: PicMobileHeaderProps) {
             </div>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-0.5 truncate mt-0.5">
               <MapPin className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
-              <span className="truncate">{user?.location?.name || "Gudang Utama A"}</span>
+              <span className="truncate">{user?.location?.name || "Belum Ada Penugasan Lokasi"}</span>
             </span>
           </div>
         </div>

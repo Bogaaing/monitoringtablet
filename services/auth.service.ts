@@ -19,59 +19,101 @@ export const authService = {
   async getCurrentProfile(): Promise<User | null> {
     const supabase = createClient();
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (user) {
         // 1. Fetch profile from Supabase public.users table by auth_id
-        const { data: profileByAuth } = await (supabase as any)
+        let { data: profileByAuth } = await (supabase as any)
           .from("users")
           .select("*, location:locations(*)")
           .eq("auth_id", user.id)
           .single();
 
-        if (profileByAuth) return profileByAuth as User;
+        if (profileByAuth) {
+          if (!profileByAuth.location && profileByAuth.location_id) {
+            try {
+              const { data: loc } = await (supabase as any)
+                .from("locations")
+                .select("*")
+                .eq("id", profileByAuth.location_id)
+                .single();
+              if (loc) profileByAuth.location = loc;
+            } catch (e) {}
+          }
+          return profileByAuth as User;
+        }
 
         // 2. Fetch profile by email if auth_id is not linked yet
         if (user.email) {
-          const { data: profileByEmail } = await (supabase as any)
+          let { data: profileByEmail } = await (supabase as any)
             .from("users")
             .select("*, location:locations(*)")
             .ilike("email", user.email)
             .single();
 
-          if (profileByEmail) return profileByEmail as User;
+          if (profileByEmail) {
+            if (!profileByEmail.location && profileByEmail.location_id) {
+              try {
+                const { data: loc } = await (supabase as any)
+                  .from("locations")
+                  .select("*")
+                  .eq("id", profileByEmail.location_id)
+                  .single();
+                if (loc) profileByEmail.location = loc;
+              } catch (e) {}
+            }
+            return profileByEmail as User;
+          }
         }
-
-        // 3. Metadata fallback from Supabase Auth
-        const role = (user.user_metadata?.role || "pic") as Role;
-        return {
-          id: user.id,
-          auth_id: user.id,
-          name: user.user_metadata?.name || user.email?.split("@")[0] || "User",
-          email: user.email || "",
-          role: role,
-          created_at: user.created_at,
-          updated_at: user.created_at,
-        };
       }
     } catch (e) {
-      console.error("getCurrentProfile error:", e);
+      console.error("getCurrentProfile auth error:", e);
     }
 
-    // Dev/Fallback profile based on cookie
+    // Check user_email cookie and fetch real profile from Supabase DB!
     if (typeof document !== "undefined") {
-      const roleMatch = document.cookie.match(/(?:^|; )demo_role=([^;]*)/);
       const emailMatch = document.cookie.match(/(?:^|; )user_email=([^;]*)/);
+      const userEmail = emailMatch ? decodeURIComponent(emailMatch[1]) : null;
+
+      if (userEmail) {
+        try {
+          let { data: profileByCookie } = await (supabase as any)
+            .from("users")
+            .select("*, location:locations(*)")
+            .ilike("email", userEmail)
+            .single();
+
+          if (profileByCookie) {
+            if (!profileByCookie.location && profileByCookie.location_id) {
+              try {
+                const { data: loc } = await (supabase as any)
+                  .from("locations")
+                  .select("*")
+                  .eq("id", profileByCookie.location_id)
+                  .single();
+                if (loc) profileByCookie.location = loc;
+              } catch (e) {}
+            }
+            return profileByCookie as User;
+          }
+        } catch (e) {}
+      }
+
+      // Dev/Fallback profile
+      const roleMatch = document.cookie.match(/(?:^|; )demo_role=([^;]*)/);
       const role = (roleMatch ? roleMatch[1] : "admin") as Role;
-      const userEmail = emailMatch ? decodeURIComponent(emailMatch[1]) : `${role}@monitoring.com`;
-      const displayName = userEmail
-        ? userEmail.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-        : "User";
+      const fallbackEmail = userEmail || `${role}@monitoring.com`;
+      const displayName = fallbackEmail
+        .split("@")[0]
+        .replace(/[._-]/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
 
       return {
         id: `user-${role}-session`,
         name: displayName,
-        email: userEmail,
+        email: fallbackEmail,
         role: role,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -138,81 +180,61 @@ export const authService = {
       else userRole = "pic";
     }
 
-    // If real Supabase Auth succeeded OR demo credentials entered
-    const isDemoCreds =
-      cleanEmail.length > 0 &&
-      (cleanEmail.includes("admin") ||
-        cleanEmail.includes("pic") ||
-        cleanEmail.includes("manager") ||
-        password === "admin123" ||
-        password === "pic123" ||
-        password === "manager123" ||
-        password.length >= 1);
-
-    if (authUser || isDemoCreds) {
-      const detectedRole = userRole || "admin";
-      if (typeof document !== "undefined") {
-        document.cookie = `demo_role=${detectedRole}; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = `user_email=${encodeURIComponent(cleanEmail)}; path=/; max-age=86400; SameSite=Lax`;
-      }
-
-      return {
-        user: authUser || { email: cleanEmail, role: detectedRole },
-        role: detectedRole,
-        redirectUrl: this.getRoleDashboard(detectedRole),
-        error: null,
-      };
+    // Set user_email cookie for session persistence across pages
+    if (typeof document !== "undefined") {
+      document.cookie = `user_email=${encodeURIComponent(cleanEmail)}; path=/; max-age=86400; SameSite=Lax`;
     }
 
+    const redirectUrl = this.getRoleDashboard(userRole);
+
     return {
-      user: null,
-      role: null,
-      redirectUrl: null,
-      error: authErrMessage || "Email atau kata sandi tidak sesuai. Silakan periksa kembali.",
+      user: authUser || { id: `demo-${userRole}`, email: cleanEmail, role: userRole },
+      redirectUrl,
+      error: authErrMessage,
     };
   },
 
-  async sendPasswordResetEmail(email: string) {
-    const supabase = createClient();
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+  async signOut() {
     try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (e) {}
+
+    if (typeof document !== "undefined") {
+      document.cookie = "user_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "demo_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    }
+  },
+
+  async sendPasswordResetEmail(email: string) {
+    try {
+      const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${origin}/reset-password`,
+        redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/reset-password`,
       });
 
-      if (!error) {
-        return { success: true, message: "Instruksi reset kata sandi telah dikirim ke email Anda." };
+      if (error) {
+        return { success: false, message: error.message || "Gagal mengirimkan instruksi reset kata sandi." };
       }
-      return { success: false, message: error.message };
+      return { success: true, message: "Instruksi reset kata sandi telah dikirim ke email Anda." };
     } catch (e: any) {
-      return { success: false, message: e.message || "Gagal mengosongkan kata sandi." };
+      return { success: false, message: e.message || "Gagal mengirimkan instruksi reset kata sandi." };
     }
   },
 
   async updatePassword(newPassword: string) {
-    const supabase = createClient();
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
-      if (!error) {
-        return { success: true, message: "Kata sandi berhasil diperbarui." };
+      if (error) {
+        return { success: false, message: error.message || "Gagal memperbarui kata sandi di Supabase." };
       }
-      return { success: false, message: error.message };
+      return { success: true, message: "Kata sandi Anda telah berhasil diperbarui." };
     } catch (e: any) {
-      return { success: false, message: e.message || "Gagal memperbarui kata sandi." };
+      return { success: false, message: e.message || "Gagal memperbarui kata sandi di Supabase." };
     }
-  },
-
-  async signOut() {
-    const supabase = createClient();
-    if (typeof document !== "undefined") {
-      document.cookie = "demo_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      document.cookie = "user_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    }
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {}
   },
 };
