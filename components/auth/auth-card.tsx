@@ -1,5 +1,5 @@
 import React from "react";
-import { TabletIcon } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 interface AuthCardProps {
@@ -11,30 +11,26 @@ interface AuthCardProps {
 
 export function AuthCard({ title, description, children, footer }: AuthCardProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-12 relative overflow-hidden font-sans">
-      {/* Subtle ambient light glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[350px] h-[350px] bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="w-full max-w-md space-y-6 relative z-10">
-        {/* Logo Header */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-500/30 ring-4 ring-indigo-500/10">
-            <TabletIcon className="h-7 w-7" />
+    <div className="min-h-screen flex items-center justify-center bg-slate-50/60 px-4 py-12 relative overflow-hidden font-sans">
+      <div className="w-full max-w-[440px] space-y-6 relative z-10">
+        {/* Header / Brand Logo */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#4F46E5] text-white shadow-md shadow-[#4F46E5]/20 ring-4 ring-[#4F46E5]/10">
+            <Smartphone className="h-6 w-6 stroke-[2.2]" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">
-            Tablet Monitoring System
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            TabMonitor
           </h1>
           <p className="text-xs text-slate-500 font-medium">
-            Sistem Inspeksi Periodic Tablet Berbasis QR Code
+            Tablet Monitoring System
           </p>
         </div>
 
-        {/* Main Light Mode Card */}
-        <Card className="border-slate-200/80 bg-white text-slate-900 shadow-xl rounded-3xl backdrop-blur-xl">
+        {/* Card */}
+        <Card className="border border-slate-200/80 bg-white text-slate-900 shadow-xl shadow-slate-200/50 rounded-[16px]">
           <CardHeader className="space-y-1 text-center pb-4 border-b border-slate-100">
-            <CardTitle className="text-xl text-slate-900 font-extrabold">{title}</CardTitle>
-            <CardDescription className="text-slate-500 text-xs">
+            <CardTitle className="text-2xl text-slate-900 font-bold tracking-tight">{title}</CardTitle>
+            <CardDescription className="text-slate-500 text-sm">
               {description}
             </CardDescription>
           </CardHeader>

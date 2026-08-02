@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { User, PaginationParams, PaginatedResult, Role } from "@/types";
 
 let mockUsers: User[] = [
@@ -93,7 +94,7 @@ export const usersService = {
     }
 
     try {
-      const supabase = createClient() as any;
+      let supabase = createClient() as any;
       let query = supabase
         .from("users")
         .select("*, location:locations(*)", { count: "exact" })
@@ -102,10 +103,10 @@ export const usersService = {
       if (search) {
         query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
       }
-      if (role) {
+      if (role && role !== "all") {
         query = query.eq("role", role);
       }
-      if (locationId) {
+      if (locationId && locationId !== "all") {
         query = query.eq("location_id", locationId);
       }
 
@@ -113,7 +114,36 @@ export const usersService = {
       const to = from + limit - 1;
       query = query.range(from, to).order("created_at", { ascending: false });
 
-      const { data, count, error } = await query;
+      let { data, count, error } = await query;
+
+      // If RLS or permissions error, retry with Admin Client
+      if (error && !process.env.SUPABASE_SERVICE_ROLE_KEY?.includes("placeholder")) {
+        try {
+          const adminSupabase = createAdminClient() as any;
+          let adminQuery = adminSupabase
+            .from("users")
+            .select("*, location:locations(*)", { count: "exact" })
+            .is("deleted_at", null);
+
+          if (search) {
+            adminQuery = adminQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+          }
+          if (role && role !== "all") {
+            adminQuery = adminQuery.eq("role", role);
+          }
+          if (locationId && locationId !== "all") {
+            adminQuery = adminQuery.eq("location_id", locationId);
+          }
+
+          adminQuery = adminQuery.range(from, to).order("created_at", { ascending: false });
+          const res = await adminQuery;
+          if (!res.error && res.data) {
+            data = res.data;
+            count = res.count;
+            error = null;
+          }
+        } catch (adminErr) {}
+      }
 
       if (!error && data) {
         return {
@@ -163,23 +193,63 @@ export const usersService = {
     location_id?: string;
     phone?: string;
   }): Promise<User> {
+    const cleanEmail = payload.email.trim().toLowerCase();
+    let authId: string | null = null;
+
+    // 1. Attempt to create Auth User in Supabase Auth (auth.users)
+    try {
+      const isPlaceholder = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes("placeholder") || 
+                          process.env.SUPABASE_SERVICE_ROLE_KEY?.includes("placeholder");
+
+      if (!isPlaceholder) {
+        const adminSupabase = createAdminClient();
+        const defaultPassword = payload.role === "admin" ? "admin123" : payload.role === "pic" ? "pic123" : "manager123";
+
+        const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
+          email: cleanEmail,
+          password: defaultPassword,
+          email_confirm: true,
+          user_metadata: {
+            name: payload.name,
+            role: payload.role,
+          },
+        });
+
+        if (!authError && authData.user) {
+          authId = authData.user.id;
+        } else if (authError) {
+          console.warn("Supabase Auth admin createUser notice:", authError.message);
+        }
+      }
+    } catch (authErr) {
+      console.warn("Auth creation skipped or service role unavailable:", authErr);
+    }
+
+    // 2. Insert into public.users with auth_id
     try {
       const supabase = createClient() as any;
+      const insertPayload = {
+        ...payload,
+        email: cleanEmail,
+        ...(authId ? { auth_id: authId } : {}),
+      };
+
       const { data, error } = await supabase
         .from("users")
-        .insert([payload])
+        .insert([insertPayload])
         .select("*, location:locations(*)")
         .single();
 
       if (!error && data) return data as unknown as User;
     } catch (e) {
-      // Fallback
+      // Fallback below
     }
 
     const newUser: User = {
       id: `u${Date.now()}`,
+      auth_id: authId || undefined,
       name: payload.name,
-      email: payload.email,
+      email: cleanEmail,
       role: payload.role,
       location_id: payload.location_id,
       phone: payload.phone || "",

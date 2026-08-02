@@ -56,13 +56,29 @@ export async function updateSession(request: NextRequest) {
 
         if (user) {
           isAuthenticated = true;
-          const { data: dbUser } = await supabase
-            .from("users")
-            .select("role")
-            .eq("auth_id", user.id)
-            .single();
+          let foundRole = user.user_metadata?.role;
 
-          userRole = dbUser?.role || user.user_metadata?.role || "pic";
+          if (!foundRole) {
+            const { data: dbUserByAuth } = await supabase
+              .from("users")
+              .select("role")
+              .eq("auth_id", user.id)
+              .single();
+
+            if (dbUserByAuth?.role) {
+              foundRole = dbUserByAuth.role;
+            } else if (user.email) {
+              const { data: dbUserByEmail } = await supabase
+                .from("users")
+                .select("role")
+                .ilike("email", user.email)
+                .single();
+
+              if (dbUserByEmail?.role) foundRole = dbUserByEmail.role;
+            }
+          }
+
+          userRole = foundRole || "pic";
         }
       } catch (err) {
         // Suppress network errors
@@ -74,7 +90,7 @@ export async function updateSession(request: NextRequest) {
       const demoRoleCookie = request.cookies.get("demo_role")?.value;
       if (demoRoleCookie || isPlaceholder) {
         isAuthenticated = true;
-        userRole = demoRoleCookie || "admin";
+        userRole = demoRoleCookie || "pic";
       }
     }
 

@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { usersService } from "@/services/users.service";
 import { User, Role } from "@/types";
 
 export const authService = {
@@ -21,13 +23,29 @@ export const authService = {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        const { data } = await supabase
+        let userProfile: User | null = null;
+        
+        // 1. Try finding profile by auth_id
+        const { data: profileByAuth } = await supabase
           .from("users")
           .select("*")
           .eq("auth_id", user.id)
           .single();
 
-        if (data) return data as User;
+        if (profileByAuth) userProfile = profileByAuth as User;
+
+        // 2. Try finding profile by email if auth_id didn't match
+        if (!userProfile && user.email) {
+          const { data: profileByEmail } = await supabase
+            .from("users")
+            .select("*")
+            .ilike("email", user.email)
+            .single();
+
+          if (profileByEmail) userProfile = profileByEmail as User;
+        }
+
+        if (userProfile) return userProfile;
 
         const role = (user.user_metadata?.role || "pic") as Role;
         return {
@@ -63,6 +81,7 @@ export const authService = {
   async signIn(email: string, password: string) {
     const cleanEmail = email.trim().toLowerCase();
     const supabase = createClient();
+    let authUser: any = null;
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -70,47 +89,86 @@ export const authService = {
         password,
       });
 
-      if (!error && data.user) {
-        // Query user role from public.users
-        const { data: userProfile } = await supabase
-          .from("users")
-          .select("role")
-          .eq("auth_id", data.user.id)
-          .single();
-
-        const role: Role = ((userProfile as { role?: Role } | null)?.role || data.user.user_metadata?.role || (cleanEmail.includes("pic") ? "pic" : cleanEmail.includes("manager") ? "manager" : "admin")) as Role;
-        if (typeof document !== "undefined") {
-          document.cookie = `demo_role=${role}; path=/; max-age=86400`;
-        }
-
-        return {
-          user: data.user,
-          role,
-          redirectUrl: this.getRoleDashboard(role),
-          error: null,
-        };
+      if (!error && data?.user) {
+        authUser = data.user;
       }
     } catch (err) {
       // Fallback below
     }
 
-    // System Fallback & Demo Login Authentication
-    let role: Role = "admin";
-    if (cleanEmail.includes("pic")) role = "pic";
-    if (cleanEmail.includes("manager")) role = "manager";
+    // Determine user role by checking database (public.users) first
+    let detectedRole: Role | null = null;
 
-    // Validate demo credentials (admin123, pic123, manager123, or password123)
+    try {
+      if (authUser?.id) {
+        const { data: profile } = await (supabase as any)
+          .from("users")
+          .select("role")
+          .eq("auth_id", authUser.id)
+          .single();
+
+        if ((profile as any)?.role) detectedRole = (profile as any).role as Role;
+      }
+
+      if (!detectedRole) {
+        const { data: profile } = await (supabase as any)
+          .from("users")
+          .select("role")
+          .ilike("email", cleanEmail)
+          .single();
+
+        if ((profile as any)?.role) detectedRole = (profile as any).role as Role;
+      }
+
+      // Try with Admin client if regular client couldn't access
+      if (!detectedRole) {
+        try {
+          const adminSupabase = createAdminClient();
+          const { data: profile } = await (adminSupabase as any)
+            .from("users")
+            .select("role")
+            .ilike("email", cleanEmail)
+            .single();
+
+          if ((profile as any)?.role) detectedRole = (profile as any).role as Role;
+        } catch (e) {}
+      }
+
+      // Try with usersService (searches Supabase & mockUsers)
+      if (!detectedRole) {
+        try {
+          const res = await usersService.getUsers({ search: cleanEmail, limit: 100 });
+          const match = res.data.find((u) => u.email.toLowerCase() === cleanEmail);
+          if (match) detectedRole = match.role;
+        } catch (e) {}
+      }
+    } catch (e) {}
+
+    // Fallbacks if not found in database or usersService
+    if (!detectedRole) {
+      if (authUser?.user_metadata?.role) {
+        detectedRole = authUser.user_metadata.role as Role;
+      } else if (cleanEmail.includes("admin")) {
+        detectedRole = "admin";
+      } else if (cleanEmail.includes("manager")) {
+        detectedRole = "manager";
+      } else {
+        detectedRole = "pic";
+      }
+    }
+
+    // Validate authentication: Either valid Supabase Auth user or valid password
     const isValidDemoPass = password === "admin123" || password === "pic123" || password === "manager123" || password === "password123" || password.length >= 6;
 
-    if (isValidDemoPass) {
+    if (authUser || isValidDemoPass) {
       if (typeof document !== "undefined") {
-        document.cookie = `demo_role=${role}; path=/; max-age=86400`;
+        document.cookie = `demo_role=${detectedRole}; path=/; max-age=86400`;
       }
 
       return {
-        user: null,
-        role,
-        redirectUrl: this.getRoleDashboard(role),
+        user: authUser,
+        role: detectedRole,
+        redirectUrl: this.getRoleDashboard(detectedRole),
         error: null,
       };
     }

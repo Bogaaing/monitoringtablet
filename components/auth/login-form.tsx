@@ -5,20 +5,22 @@ import { useRouter } from "next/navigation";
 import { authService } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+
+    if (!email.trim() || !password) {
       setErrorMsg("Alamat email dan kata sandi wajib diisi.");
       return;
     }
@@ -43,85 +45,109 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Error Alert Toast */}
       {errorMsg && (
-        <div className="flex items-center gap-2 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-semibold animate-in fade-in">
-          <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium animate-in fade-in">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-500" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Email Input */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-bold text-slate-700">Alamat Email</label>
+      {/* Email Field */}
+      <div>
+        <label htmlFor="email" className="block text-xs font-semibold text-slate-700 mb-2">
+          Email
+        </label>
         <div className="relative">
-          <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <Mail className="w-4 h-4" />
+          </div>
           <Input
+            id="email"
             type="email"
-            placeholder="nama@company.com"
+            required
+            placeholder="name@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
             disabled={loading}
-            className="pl-9 h-11 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500 text-xs font-medium rounded-xl"
+            className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent transition-all duration-200 h-11"
           />
         </div>
       </div>
 
-      {/* Password Input */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-slate-700">Kata Sandi</label>
-          <Link
-            href="/forgot-password"
-            className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold hover:underline"
-          >
-            Lupa kata sandi?
-          </Link>
-        </div>
+      {/* Password Field */}
+      <div>
+        <label htmlFor="password" className="block text-xs font-semibold text-slate-700 mb-2">
+          Password
+        </label>
         <div className="relative">
-          <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <Lock className="w-4 h-4" />
+          </div>
           <Input
+            id="password"
             type={showPassword ? "text" : "password"}
+            required
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required
             disabled={loading}
-            className="pl-9 pr-9 h-11 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-indigo-500 text-xs font-medium rounded-xl"
+            className="w-full pl-10 pr-10 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent transition-all duration-200 h-11"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
           >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
+      </div>
+
+      {/* Options Row */}
+      <div className="flex items-center justify-between pt-1">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition"
+          />
+          <span className="text-xs font-medium text-slate-600">Remember Me</span>
+        </label>
+        <Link
+          href="/forgot-password"
+          className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition"
+        >
+          Forgot Password?
+        </Link>
       </div>
 
       {/* Submit Button */}
       <Button
         type="submit"
         disabled={loading}
-        className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold shadow-md shadow-indigo-500/20 gap-2 mt-3 text-xs uppercase tracking-wider rounded-xl transition-all"
+        className="w-full mt-2 bg-[#473bf0] hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-indigo-200 flex items-center justify-center gap-2 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 h-11"
       >
         {loading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Memverifikasi Akun...</span>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Authenticating...</span>
           </>
         ) : (
           <>
-            <span>Masuk ke Sistem</span>
-            <ArrowRight className="h-4 w-4" />
+            <span>Sign In</span>
+            <ArrowRight className="w-4 h-4" />
           </>
         )}
       </Button>
 
-      {/* Quick Demo Credentials Autofill Hints */}
-      <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-500 text-center space-y-1.5">
-        <span className="font-semibold block">Klik untuk Mengisi Akun Demo (Otomatis Deteksi Peran):</span>
+      {/* Quick Autofill Options for Testing */}
+      <div className="pt-3 border-t border-slate-100 text-center space-y-1.5">
+        <span className="text-[11px] font-semibold text-slate-400 block">
+          Pilih Akun Demo untuk Pengujian Cepat:
+        </span>
         <div className="flex flex-wrap justify-center gap-1.5">
           <button
             type="button"
@@ -131,9 +157,8 @@ export function LoginForm() {
             }}
             className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
           >
-            Admin (admin@monitoring.com)
+            Admin
           </button>
-
           <button
             type="button"
             onClick={() => {
@@ -142,9 +167,8 @@ export function LoginForm() {
             }}
             className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
           >
-            PIC (pic@monitoring.com)
+            PIC (Kepala Regu)
           </button>
-
           <button
             type="button"
             onClick={() => {
@@ -153,7 +177,7 @@ export function LoginForm() {
             }}
             className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
           >
-            Manager (manager@monitoring.com)
+            Manager
           </button>
         </div>
       </div>
