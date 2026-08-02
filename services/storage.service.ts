@@ -26,26 +26,30 @@ export const storageService = {
           upsert: true,
         });
 
-      if (error) {
-        console.warn("Supabase storage upload error, returning object URL fallback:", error.message);
-        // Dev fallback if storage bucket not initialized locally
-        const mockUrl = typeof window !== "undefined" ? URL.createObjectURL(file) : "/placeholder-photo.jpg";
-        return { path, publicUrl: mockUrl };
+      if (!error && data) {
+        const { data: urlData } = supabase.storage
+          .from("inspection-photos")
+          .getPublicUrl(data.path);
+
+        return {
+          path: data.path,
+          publicUrl: urlData.publicUrl,
+        };
       }
-
-      const { data: urlData } = supabase.storage
-        .from("inspection-photos")
-        .getPublicUrl(data.path);
-
-      return {
-        path: data.path,
-        publicUrl: urlData.publicUrl,
-      };
     } catch (err: any) {
-      console.warn("Storage upload exception, using local URL:", err);
-      const mockUrl = typeof window !== "undefined" ? URL.createObjectURL(file) : "/placeholder-photo.jpg";
-      return { path, publicUrl: mockUrl };
+      console.error("Storage upload exception:", err);
     }
+
+    // Fallback URL generation
+    const supabase = createClient();
+    const { data: urlData } = supabase.storage
+      .from("inspection-photos")
+      .getPublicUrl(path);
+
+    return {
+      path,
+      publicUrl: urlData.publicUrl || (typeof window !== "undefined" ? URL.createObjectURL(file) : ""),
+    };
   },
 
   /**
@@ -73,7 +77,7 @@ export const storageService = {
       const { data } = supabase.storage.from("inspection-photos").getPublicUrl(path);
       return data.publicUrl;
     } catch (e) {
-      return "/placeholder-photo.jpg";
+      return "";
     }
   },
 };

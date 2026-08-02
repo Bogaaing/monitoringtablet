@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { usersService } from "@/services/users.service";
 import { User, Role } from "@/types";
 
 export const authService = {
@@ -23,30 +22,27 @@ export const authService = {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        let userProfile: User | null = null;
-        
-        // 1. Try finding profile by auth_id
-        const { data: profileByAuth } = await supabase
+        // 1. Fetch profile from Supabase public.users table by auth_id
+        const { data: profileByAuth } = await (supabase as any)
           .from("users")
-          .select("*")
+          .select("*, location:locations(*)")
           .eq("auth_id", user.id)
           .single();
 
-        if (profileByAuth) userProfile = profileByAuth as User;
+        if (profileByAuth) return profileByAuth as User;
 
-        // 2. Try finding profile by email if auth_id didn't match
-        if (!userProfile && user.email) {
-          const { data: profileByEmail } = await supabase
+        // 2. Fetch profile by email if auth_id is not linked yet
+        if (user.email) {
+          const { data: profileByEmail } = await (supabase as any)
             .from("users")
-            .select("*")
+            .select("*, location:locations(*)")
             .ilike("email", user.email)
             .single();
 
-          if (profileByEmail) userProfile = profileByEmail as User;
+          if (profileByEmail) return profileByEmail as User;
         }
 
-        if (userProfile) return userProfile;
-
+        // 3. Metadata fallback from Supabase Auth
         const role = (user.user_metadata?.role || "pic") as Role;
         return {
           id: user.id,
@@ -59,128 +55,79 @@ export const authService = {
         };
       }
     } catch (e) {
-      // Suppress connection errors
+      console.error("getCurrentProfile error:", e);
     }
 
-    // Dev/fallback mode reading demo_role cookie
-    if (typeof document !== "undefined") {
-      const match = document.cookie.match(/(?:^|; )demo_role=([^;]*)/);
-      const role = (match ? match[1] : "admin") as Role;
-      return {
-        id: `user-${role}-demo`,
-        name: role === "admin" ? "Super Admin" : role === "pic" ? "Ahmad Rizky (PIC)" : "Bambang Wijaya (Manager)",
-        email: `${role}@monitoring.com`,
-        role: role,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-    }
     return null;
   },
 
   async signIn(email: string, password: string) {
     const cleanEmail = (email || "").trim().toLowerCase();
-    
+    const supabase = createClient();
+
     try {
-      const supabase = createClient();
-      let authUser: any = null;
+      // 1. Authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
 
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
-
-        if (!error && data?.user) {
-          authUser = data.user;
-        }
-      } catch (err) {
-        // Suppress Supabase client connection errors
+      if (authError || !authData?.user) {
+        return {
+          user: null,
+          role: null,
+          redirectUrl: null,
+          error: authError?.message || "Email atau kata sandi tidak sesuai.",
+        };
       }
 
-      // Determine user role by checking database (public.users) first
-      let detectedRole: Role | null = null;
+      const authUser = authData.user;
+
+      // 2. Retrieve user role from Supabase DB (public.users)
+      let userRole: Role = (authUser.user_metadata?.role as Role) || "pic";
 
       try {
-        if (authUser?.id) {
-          const { data: profile } = await (supabase as any)
-            .from("users")
-            .select("role")
-            .eq("auth_id", authUser.id)
-            .single();
+        const { data: profile } = await (supabase as any)
+          .from("users")
+          .select("role")
+          .eq("auth_id", authUser.id)
+          .single();
 
-          if ((profile as any)?.role) detectedRole = (profile as any).role as Role;
-        }
-
-        if (!detectedRole) {
-          const { data: profile } = await (supabase as any)
+        if ((profile as any)?.role) {
+          userRole = (profile as any).role as Role;
+        } else if (cleanEmail) {
+          const { data: emailProfile } = await (supabase as any)
             .from("users")
             .select("role")
             .ilike("email", cleanEmail)
             .single();
 
-          if ((profile as any)?.role) detectedRole = (profile as any).role as Role;
+          if ((emailProfile as any)?.role) {
+            userRole = (emailProfile as any).role as Role;
+          }
         }
-
-        // Try with Admin client ONLY on server side (where service role key exists)
-        if (!detectedRole && typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-          try {
-            const adminSupabase = createAdminClient();
-            const { data: profile } = await (adminSupabase as any)
-              .from("users")
-              .select("role")
-              .ilike("email", cleanEmail)
-              .single();
-
-            if ((profile as any)?.role) detectedRole = (profile as any).role as Role;
-          } catch (e) {}
-        }
-
-        // Try with usersService (searches Supabase & mockUsers safely)
-        if (!detectedRole) {
-          try {
-            const res = await usersService.getUsers({ search: cleanEmail, limit: 100 });
-            const match = res.data?.find((u) => u.email.toLowerCase() === cleanEmail);
-            if (match) detectedRole = match.role;
-          } catch (e) {}
-        }
-      } catch (e) {}
-
-      // Fallbacks if not found in database or usersService
-      if (!detectedRole) {
-        if (authUser?.user_metadata?.role) {
-          detectedRole = authUser.user_metadata.role as Role;
-        } else if (cleanEmail.includes("admin")) {
-          detectedRole = "admin";
-        } else if (cleanEmail.includes("manager")) {
-          detectedRole = "manager";
-        } else {
-          detectedRole = "pic";
-        }
+      } catch (e) {
+        // Suppress profile lookup error
       }
 
-      // Set demo_role cookie for client side navigation
+      // Set cookie for middleware route protection
       if (typeof document !== "undefined") {
-        document.cookie = `demo_role=${detectedRole}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `demo_role=${userRole}; path=/; max-age=86400; SameSite=Lax`;
       }
 
       return {
         user: authUser,
-        role: detectedRole,
-        redirectUrl: this.getRoleDashboard(detectedRole),
+        role: userRole,
+        redirectUrl: this.getRoleDashboard(userRole),
         error: null,
       };
     } catch (globalErr: any) {
       console.error("signIn error:", globalErr);
-      const fallbackRole: Role = cleanEmail.includes("admin") ? "admin" : cleanEmail.includes("manager") ? "manager" : "pic";
-      if (typeof document !== "undefined") {
-        document.cookie = `demo_role=${fallbackRole}; path=/; max-age=86400; SameSite=Lax`;
-      }
       return {
         user: null,
-        role: fallbackRole,
-        redirectUrl: this.getRoleDashboard(fallbackRole),
-        error: null,
+        role: null,
+        redirectUrl: null,
+        error: "Gagal terhubung ke layanan otentikasi Supabase.",
       };
     }
   },
@@ -196,9 +143,10 @@ export const authService = {
       if (!error) {
         return { success: true, message: "Instruksi reset kata sandi telah dikirim ke email Anda." };
       }
-    } catch (e) {}
-
-    return { success: true, message: "Instruksi reset kata sandi telah dikirim ke email Anda (Demo Mode)." };
+      return { success: false, message: error.message };
+    } catch (e: any) {
+      return { success: false, message: e.message || "Gagal mengosongkan kata sandi." };
+    }
   },
 
   async updatePassword(newPassword: string) {
@@ -211,9 +159,10 @@ export const authService = {
       if (!error) {
         return { success: true, message: "Kata sandi berhasil diperbarui." };
       }
-    } catch (e) {}
-
-    return { success: true, message: "Kata sandi berhasil diperbarui (Demo Mode)." };
+      return { success: false, message: error.message };
+    } catch (e: any) {
+      return { success: false, message: e.message || "Gagal memperbarui kata sandi." };
+    }
   },
 
   async signOut() {
