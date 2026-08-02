@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { User, InspectionPeriod } from "@/types";
-import { Calendar, Wifi, WifiOff, Download, User as UserIcon, RefreshCw } from "lucide-react";
+import { MapPin, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { offlineSyncService } from "@/services/offline-sync.service";
 
 interface PicMobileHeaderProps {
@@ -10,10 +10,9 @@ interface PicMobileHeaderProps {
   activePeriod?: InspectionPeriod | null;
 }
 
-export function PicMobileHeader({ user, activePeriod }: PicMobileHeaderProps) {
+export function PicMobileHeader({ user }: PicMobileHeaderProps) {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
@@ -29,28 +28,18 @@ export function PicMobileHeader({ user, activePeriod }: PicMobileHeaderProps) {
     window.addEventListener("online", updateOnline);
     window.addEventListener("offline", updateOnline);
 
-    // Listen for PWA install prompt
-    const handleInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setInstallPrompt(e);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
-
-    // Initial check for offline pending syncs
     setPendingCount(offlineSyncService.getPending().length);
 
     return () => {
       window.removeEventListener("online", updateOnline);
       window.removeEventListener("offline", updateOnline);
-      window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
     };
   }, []);
 
   const handleAutoSync = async () => {
     setSyncing(true);
     try {
-      const res = await offlineSyncService.syncAll();
+      await offlineSyncService.syncAll();
       setPendingCount(offlineSyncService.getPending().length);
     } catch (e) {
     } finally {
@@ -58,88 +47,64 @@ export function PicMobileHeader({ user, activePeriod }: PicMobileHeaderProps) {
     }
   };
 
-  const handleInstallClick = () => {
-    if (installPrompt) {
-      installPrompt.prompt();
-      installPrompt.userChoice.then(() => setInstallPrompt(null));
-    }
-  };
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "AR";
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 backdrop-blur-md px-4 py-3">
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 border-b border-slate-200/80 dark:border-slate-800 backdrop-blur-md px-3.5 py-2">
       <div className="flex items-center justify-between gap-2">
-        {/* Left: App Logo & Role Badge */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-md shadow-indigo-200 dark:shadow-none">
-            T
+        {/* Left: Avatar + User Name + Location + Role Badge */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-sm shadow-indigo-500/20 border border-indigo-500/30">
+            {initials}
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-black tracking-tight text-slate-900 dark:text-slate-100">
-                TabMonitor
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 leading-none">
+              <span className="text-xs font-black text-slate-900 dark:text-slate-100 truncate">
+                {user?.name || "Ahmad Rizky"}
               </span>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 uppercase">
+              <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200/60 shrink-0 uppercase tracking-wider">
                 PIC PWA
               </span>
             </div>
-            <span className="text-[10px] text-slate-500 font-medium block leading-none">
-              {user?.name || "Kepala Regu"}
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-0.5 truncate mt-0.5">
+              <MapPin className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+              <span className="truncate">{user?.location?.name || "Gudang Utama A"}</span>
             </span>
           </div>
         </div>
 
-        {/* Right: Network Status & PWA Install */}
-        <div className="flex items-center gap-1.5">
-          {/* Offline / Pending Sync Badge */}
-          {pendingCount > 0 && (
+        {/* Right: Connection Status & Pending Sync */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {pendingCount > 0 ? (
             <button
               onClick={handleAutoSync}
               disabled={syncing || !isOnline}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-[10px] font-bold"
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 text-amber-700 dark:text-amber-300 text-[9px] font-bold shadow-2xs"
               title="Klik untuk menyinkronkan data offline"
             >
-              <RefreshCw className={`w-3 h-3 ${syncing ? "animate-spin" : ""}`} />
-              <span>Pending Sync ({pendingCount})</span>
+              <RefreshCw className={`w-2.5 h-2.5 ${syncing ? "animate-spin" : ""}`} />
+              <span>🟠 {pendingCount} Pending Sync</span>
             </button>
-          )}
-
-          {/* Network Indicator */}
-          <div
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold ${
-              isOnline
-                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
-                : "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300"
-            }`}
-          >
-            {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            <span className="hidden xs:inline">{isOnline ? "Online" : "Offline"}</span>
-          </div>
-
-          {/* PWA Install Button */}
-          {installPrompt && (
-            <button
-              onClick={handleInstallClick}
-              className="p-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center gap-1 hover:bg-indigo-700 transition"
-              title="Install TabMonitor PWA ke layar utama"
-            >
-              <Download className="w-3.5 h-3.5" />
-            </button>
+          ) : isOnline ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              🟢 Online
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200/60 text-rose-700 dark:text-rose-300 text-[9px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              🔴 Offline
+            </span>
           )}
         </div>
       </div>
-
-      {/* Active Period Banner */}
-      {activePeriod && (
-        <div className="mt-2.5 flex items-center justify-between px-3 py-1.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>{activePeriod.name}</span>
-          </div>
-          <span className="text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-indigo-200/50 dark:bg-indigo-900/50">
-            Aktif
-          </span>
-        </div>
-      )}
     </header>
   );
 }
