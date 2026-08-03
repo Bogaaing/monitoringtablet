@@ -64,9 +64,19 @@ export async function applyInspectionWatermark(
 ): Promise<WatermarkResult> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    const propanLogoImg = new Image();
+    propanLogoImg.crossOrigin = "anonymous";
+    propanLogoImg.src = "/propan-logo.svg";
 
-    img.onload = () => {
+    img.onload = async () => {
       try {
+        // Ensure propanLogoImg is loaded if possible
+        if (!propanLogoImg.complete) {
+          await new Promise<void>((res) => {
+            propanLogoImg.onload = () => res();
+            propanLogoImg.onerror = () => res();
+          });
+        }
         // 1. Calculate Target Canvas Dimensions (Max width 1600px)
         const MAX_WIDTH = 1600;
         let width = img.width;
@@ -229,16 +239,23 @@ export async function applyInspectionWatermark(
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // 7. Draw Branding Footer (Logo height 28–32px)
+        // 7. Draw Branding Footer (Logo height 28–38px)
         currentY += Math.round(dividerGap * 0.8) + Math.round(logoHeight / 2);
         const logoX = contentX;
         const logoY = currentY - Math.round(logoHeight / 2);
 
-        // Draw Official Propan Emblem Logo (Height 28-32px)
-        drawPropanOfficialEmblem(ctx, logoX, logoY, logoHeight, "#5B4CF6", "#FFFFFF");
+        // Draw Official Propan Logo Image or Vector Fallback
+        let logoWidthUsed = logoHeight;
+        if (propanLogoImg.complete && propanLogoImg.naturalWidth > 0) {
+          const logoAspect = propanLogoImg.naturalWidth / propanLogoImg.naturalHeight;
+          logoWidthUsed = Math.round(logoHeight * logoAspect);
+          ctx.drawImage(propanLogoImg, logoX, logoY, logoWidthUsed, logoHeight);
+        } else {
+          drawPropanOfficialEmblem(ctx, logoX, logoY, logoHeight, "#5B4CF6", "#FFFFFF");
+        }
 
         // Footer Branding Text (Next to logo)
-        const brandTextX = logoX + logoHeight + Math.round(10 * scale);
+        const brandTextX = logoX + logoWidthUsed + Math.round(10 * scale);
         ctx.font = `600 ${fontHeaderSize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
         ctx.fillStyle = "#FFFFFF";
         ctx.fillText("PT. PROPAN RAYA ICC", brandTextX, currentY - Math.round(fontFooterSize * 0.45));
