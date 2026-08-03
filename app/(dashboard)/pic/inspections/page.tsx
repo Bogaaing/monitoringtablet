@@ -17,6 +17,7 @@ export default function PicInspectionsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
+  const [activePhotoUrl, setActivePhotoUrl] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -222,9 +223,13 @@ export default function PicInspectionsPage() {
                   <span className="font-bold text-slate-700 dark:text-slate-300">Foto Fisik Tablet ({selectedInspection.photos.length}):</span>
                   <div className="grid grid-cols-2 gap-2">
                     {selectedInspection.photos.map((ph) => (
-                      <div key={ph.id} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                      <div
+                        key={ph.id}
+                        onClick={() => setActivePhotoUrl(ph.photo_url)}
+                        className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm cursor-pointer group hover:scale-[1.02] transition-transform"
+                      >
                         <img src={ph.photo_url} alt="Foto Inspeksi" className="w-full h-full object-cover" />
-                        <span className="absolute bottom-1 left-1 bg-slate-900/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
+                        <span className="absolute bottom-1 left-1 bg-slate-900/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
                           {ph.photo_type}
                         </span>
                       </div>
@@ -239,6 +244,32 @@ export default function PicInspectionsPage() {
                 Tutup
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Fullscreen Photo Viewer */}
+      {activePhotoUrl && (
+        <div
+          onClick={() => setActivePhotoUrl(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 bg-slate-950/90 backdrop-blur-md animate-in fade-in cursor-zoom-out"
+        >
+          <div className="relative max-w-full max-h-full flex items-center justify-center">
+            <img
+              src={activePhotoUrl}
+              alt="Foto Inspeksi Full"
+              className="max-w-[92vw] max-h-[85vh] w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/20"
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActivePhotoUrl(null);
+              }}
+              className="absolute -top-12 right-0 sm:top-4 sm:right-4 p-2 bg-slate-900/80 text-white rounded-full hover:bg-slate-800 border border-white/20 shadow-lg cursor-pointer"
+              title="Tutup Preview Foto"
+            >
+              <X className="h-6 w-6" />
+            </button>
           </div>
         </div>
       )}

@@ -501,13 +501,21 @@ export default function ManagerApprovalsPage() {
       {activePhotoUrl && (
         <div
           onClick={() => setActivePhotoUrl(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-lg animate-in fade-in cursor-zoom-out"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 bg-slate-950/90 backdrop-blur-md animate-in fade-in cursor-zoom-out"
         >
-          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl">
-            <img src={activePhotoUrl} alt="Foto Zoom" className="w-full h-full object-contain" />
+          <div className="relative max-w-full max-h-full flex items-center justify-center">
+            <img
+              src={activePhotoUrl}
+              alt="Foto Inspeksi Full"
+              className="max-w-[92vw] max-h-[85vh] w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/20"
+            />
             <button
-              onClick={() => setActivePhotoUrl(null)}
-              className="absolute top-4 right-4 p-2 bg-slate-900/80 text-white rounded-full hover:bg-slate-800"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActivePhotoUrl(null);
+              }}
+              className="absolute -top-12 right-0 sm:top-4 sm:right-4 p-2 bg-slate-900/80 text-white rounded-full hover:bg-slate-800 border border-white/20 shadow-lg cursor-pointer"
+              title="Tutup Preview Foto"
             >
               <X className="h-6 w-6" />
             </button>
