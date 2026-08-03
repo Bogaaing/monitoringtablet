@@ -90,42 +90,41 @@ export async function applyInspectionWatermark(
         // 2. Draw Base Image
         ctx.drawImage(img, 0, 0, width, height);
 
-        // 3. Responsive Scaling Ratio relative to 1000px base width
-        const scale = Math.max(0.75, Math.min(1.6, width / 1000));
+        // 3. Scaling Ratio relative to image width (Significantly increased for maximum readability)
+        const scale = Math.max(1.0, Math.min(2.0, width / 950));
 
-        // Target Card Size: Width ~280–300px (scaled), Max 28% of image width
-        const targetWidthPx = 320 * scale;
-        const maxAllowedWidth = width * 0.32;
-        const cardWidth = Math.round(Math.min(targetWidthPx, maxAllowedWidth));
+        // Card Size: Width ~40-44% of image width (Min 420px on high-res)
+        const cardWidth = Math.round(Math.min(width * 0.44, Math.max(420, width * 0.40)));
 
-        // Safe Margins: Left 24px, Bottom 24px (scaled)
-        const marginX = Math.round(24 * scale);
-        const marginY = Math.round(24 * scale);
+        // Safe Margins: Left 28px, Bottom 28px (scaled)
+        const marginX = Math.round(28 * scale);
+        const marginY = Math.round(28 * scale);
 
-        // Spacing & Sizes
-        const padding = Math.round(16 * scale);
-        const rowGap = Math.round(8 * scale);
-        const iconSize = Math.round(14 * scale);
+        // Spacing & Sizes (Increased for maximum clarity)
+        const padding = Math.round(20 * scale);
+        const rowGap = Math.round(10 * scale);
+        const iconSize = Math.round(18 * scale);
 
-        // Font Sizes: Header 14px, Body 13px, Footer 12px
-        const fontHeaderSize = Math.round(14 * scale);
-        const fontBodySize = Math.round(13 * scale);
-        const fontFooterSize = Math.round(12 * scale);
+        // Font Sizes: Header 18px, Tablet Code 20px, Body 16px, Footer 14px
+        const fontHeaderSize = Math.round(18 * scale);
+        const fontTabletSize = Math.round(20 * scale);
+        const fontBodySize = Math.round(16 * scale);
+        const fontFooterSize = Math.round(14 * scale);
 
         // Calculate Rows
         const hasGps = Boolean(metadata.gpsCoords && metadata.gpsCoords.trim().length > 0);
         const textRowsCount = hasGps ? 6 : 5;
 
-        const rowHeight = Math.round(fontBodySize * 1.5);
+        const rowHeight = Math.round(fontBodySize * 1.6);
         const bodyHeight = textRowsCount * rowHeight + (textRowsCount - 1) * (rowGap * 0.3);
-        const logoHeight = Math.round(30 * scale); // 28-32px
+        const logoHeight = Math.round(38 * scale); // 36-40px high
         const footerHeight = Math.max(logoHeight, Math.round(fontHeaderSize * 2.2));
-        const dividerGap = Math.round(10 * scale);
+        const dividerGap = Math.round(12 * scale);
 
         const cardHeight = padding * 2 + bodyHeight + dividerGap * 2 + 1 + footerHeight;
         const cardX = marginX;
         const cardY = height - marginY - cardHeight;
-        const borderRadius = Math.round(18 * scale); // 18px radius
+        const borderRadius = Math.round(20 * scale); // 20px radius
 
         // 4. Draw Glassmorphism Card Background
         ctx.save();
@@ -199,17 +198,17 @@ export async function applyInspectionWatermark(
           const textStartX = contentX + iconSize + Math.round(10 * scale);
 
           if (item.isTabletCode) {
-            // Tablet Code: Visually Stronger (Bold, #5B4CF6 Primary Purple Accent)
-            ctx.font = `800 ${fontHeaderSize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
+            // Tablet Code: Visually Stronger (Extra Bold 800, #5B4CF6 Primary Purple Accent)
+            ctx.font = `800 ${fontTabletSize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
             ctx.fillStyle = "#5B4CF6"; // Primary Purple Accent
             ctx.fillText(item.label, textStartX, currentY);
 
             const tabletCodeWidth = ctx.measureText(item.label).width;
 
             if (item.subLabel) {
-              ctx.font = `500 ${fontBodySize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
-              ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
-              ctx.fillText(item.subLabel, textStartX + tabletCodeWidth + Math.round(4 * scale), currentY);
+              ctx.font = `600 ${fontBodySize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
+              ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+              ctx.fillText(item.subLabel, textStartX + tabletCodeWidth + Math.round(6 * scale), currentY);
             }
           } else {
             // Body Item Text: rgba(255,255,255,.78), Weight 500
