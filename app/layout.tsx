@@ -10,10 +10,18 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "TabMonitor — Sistem Monitoring Tablet",
+  title: "TabMonitor — PT. Propan Raya ICC",
   description:
     "Aplikasi Progressive Web App monitoring & inspeksi tablet bulanan menggunakan QR Code, role-based workflows, dan persetujuan Manager.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/propan-logo.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/propan-logo.svg",
+    apple: "/icons/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -21,12 +29,12 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
-    "msapplication-TileColor": "#473bf0",
+    "msapplication-TileColor": "#2E2A7B",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#473bf0",
+  themeColor: "#2E2A7B",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -41,7 +49,8 @@ export default function RootLayout({
   return (
     <html lang="id" className={`h-full ${jakarta.variable}`}>
       <head>
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/propan-logo.svg" type="image/svg+xml" />
+        <link rel="alternate icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
