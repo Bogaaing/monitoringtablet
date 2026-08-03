@@ -2,7 +2,7 @@ export interface WatermarkMetadata {
   inspectionDate: string; // e.g. "02 Agustus 2026"
   inspectionTime: string; // e.g. "09:35:28 WIB"
   assignedLocation: string; // e.g. "Gudang Utama A"
-  tabletCode: string; // e.g. "TAB-001"
+  tabletCode: string; // e.g. "TB-04" or "TAB-001"
   gpsCoords?: string | null; // e.g. "-6.914744, 107.609810"
   picName: string; // e.g. "Ahmad Rizky (PIC)"
   deviceModel?: string; // e.g. "Exproof (P9000)"
@@ -56,7 +56,7 @@ export function generatePhotoFilename(tabletCode: string, date: Date = new Date(
 }
 
 /**
- * Apply automatic glassmorphism inspection watermark on HTML5 Canvas
+ * Apply refined glassmorphism inspection watermark on HTML5 Canvas
  */
 export async function applyInspectionWatermark(
   imageSource: File | Blob | string,
@@ -90,36 +90,51 @@ export async function applyInspectionWatermark(
         // 2. Draw Base Image
         ctx.drawImage(img, 0, 0, width, height);
 
-        // 3. Calculate Watermark Card Dimensions
-        // Width: ~30-35% of image width, min 340px, max 520px
-        const cardWidth = Math.max(340, Math.min(520, Math.round(width * 0.32)));
-        const marginX = Math.round(width * 0.035);
-        const marginY = Math.round(height * 0.035);
+        // 3. Responsive Scaling Ratio relative to 1000px base width
+        const scale = Math.max(0.75, Math.min(1.6, width / 1000));
 
-        // Calculate card height based on items to display
+        // Target Card Size: Width ~280–300px (scaled), Max 28% of image width
+        const targetWidthPx = 320 * scale;
+        const maxAllowedWidth = width * 0.32;
+        const cardWidth = Math.round(Math.min(targetWidthPx, maxAllowedWidth));
+
+        // Safe Margins: Left 24px, Bottom 24px (scaled)
+        const marginX = Math.round(24 * scale);
+        const marginY = Math.round(24 * scale);
+
+        // Spacing & Sizes
+        const padding = Math.round(16 * scale);
+        const rowGap = Math.round(8 * scale);
+        const iconSize = Math.round(14 * scale);
+
+        // Font Sizes: Header 14px, Body 13px, Footer 12px
+        const fontHeaderSize = Math.round(14 * scale);
+        const fontBodySize = Math.round(13 * scale);
+        const fontFooterSize = Math.round(12 * scale);
+
+        // Calculate Rows
         const hasGps = Boolean(metadata.gpsCoords && metadata.gpsCoords.trim().length > 0);
-        const fontBaseSize = Math.max(12, Math.round(cardWidth * 0.036));
-        const lineHeight = Math.round(fontBaseSize * 1.55);
-        const padding = Math.round(cardWidth * 0.055);
+        const textRowsCount = hasGps ? 6 : 5;
 
-        // Lines count: Date, Time, Location, Tablet, [GPS], PIC + Divider + Branding Footer
-        const textLinesCount = hasGps ? 6 : 5;
-        const bodyHeight = textLinesCount * lineHeight;
-        const footerHeight = Math.round(fontBaseSize * 3.4);
-        const cardHeight = padding * 2 + bodyHeight + Math.round(lineHeight * 0.5) + footerHeight;
+        const rowHeight = Math.round(fontBodySize * 1.5);
+        const bodyHeight = textRowsCount * rowHeight + (textRowsCount - 1) * (rowGap * 0.3);
+        const logoHeight = Math.round(30 * scale); // 28-32px
+        const footerHeight = Math.max(logoHeight, Math.round(fontHeaderSize * 2.2));
+        const dividerGap = Math.round(10 * scale);
 
+        const cardHeight = padding * 2 + bodyHeight + dividerGap * 2 + 1 + footerHeight;
         const cardX = marginX;
         const cardY = height - marginY - cardHeight;
-        const borderRadius = Math.max(16, Math.round(cardWidth * 0.06)); // ~24px rounded
+        const borderRadius = Math.round(18 * scale); // 18px radius
 
         // 4. Draw Glassmorphism Card Background
         ctx.save();
-        
-        // Soft outer purple glow
-        ctx.shadowColor = "rgba(46, 42, 123, 0.45)";
-        ctx.shadowBlur = Math.round(cardWidth * 0.06);
+
+        // Shadow: 0 8px 24px rgba(0,0,0,.28)
+        ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
+        ctx.shadowBlur = Math.round(24 * scale);
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = Math.round(cardWidth * 0.02);
+        ctx.shadowOffsetY = Math.round(8 * scale);
 
         // Rounded Rect Path
         ctx.beginPath();
@@ -129,98 +144,123 @@ export async function applyInspectionWatermark(
           ctx.rect(cardX, cardY, cardWidth, cardHeight);
         }
 
-        // Dark semi-transparent slate background
-        const bgGradient = ctx.createLinearGradient(cardX, cardY, cardX + cardWidth, cardY + cardHeight);
-        bgGradient.addColorStop(0, "rgba(15, 23, 42, 0.88)");
-        bgGradient.addColorStop(1, "rgba(30, 27, 75, 0.85)");
-        ctx.fillStyle = bgGradient;
+        // Glassmorphism Fill: rgba(16,18,35,0.72)
+        ctx.fillStyle = "rgba(16, 18, 35, 0.75)";
         ctx.fill();
 
-        // Thin white & purple border
+        // Border: 1px solid rgba(255,255,255,0.18)
         ctx.shadowColor = "transparent";
-        ctx.lineWidth = Math.max(1.5, Math.round(cardWidth * 0.005));
-        const borderGradient = ctx.createLinearGradient(cardX, cardY, cardX + cardWidth, cardY + cardHeight);
-        borderGradient.addColorStop(0, "rgba(255, 255, 255, 0.35)");
-        borderGradient.addColorStop(0.5, "rgba(99, 102, 241, 0.4)");
-        borderGradient.addColorStop(1, "rgba(255, 255, 255, 0.15)");
-        ctx.strokeStyle = borderGradient;
+        ctx.lineWidth = Math.max(1, Math.round(1 * scale));
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
         ctx.stroke();
 
         ctx.restore();
 
-        // 5. Render Text & Metadata inside Card
+        // 5. Render Hierarchy Text inside Card
         ctx.save();
         const contentX = cardX + padding;
-        let currentY = cardY + padding + fontBaseSize;
+        let currentY = cardY + padding + fontBodySize * 0.7;
 
-        ctx.font = `600 ${fontBaseSize}px 'Plus Jakarta Sans', 'Inter', sans-serif`;
         ctx.textBaseline = "middle";
 
-        const items: { icon: string; text: string; highlight?: boolean }[] = [
-          { icon: "📅", text: metadata.inspectionDate },
-          { icon: "🕒", text: metadata.inspectionTime },
-          { icon: "📍", text: metadata.assignedLocation },
-          { icon: "📱", text: `${metadata.tabletCode}${metadata.deviceModel ? ` (${metadata.deviceModel})` : ""}`, highlight: true },
+        const infoItems: {
+          iconType: string;
+          label: string;
+          isTabletCode?: boolean;
+          subLabel?: string;
+        }[] = [
+          { iconType: "date", label: metadata.inspectionDate },
+          { iconType: "time", label: metadata.inspectionTime },
+          { iconType: "location", label: metadata.assignedLocation },
+          {
+            iconType: "tablet",
+            label: metadata.tabletCode,
+            isTabletCode: true,
+            subLabel: metadata.deviceModel ? ` ${metadata.deviceModel}` : "",
+          },
+          { iconType: "user", label: metadata.picName },
         ];
 
         if (hasGps) {
-          items.push({ icon: "🌍", text: metadata.gpsCoords! });
+          infoItems.push({ iconType: "gps", label: metadata.gpsCoords! });
         }
 
-        items.push({ icon: "👤", text: metadata.picName });
+        infoItems.forEach((item) => {
+          // Draw Outline Icon (14px)
+          drawLucideOutlineIcon(
+            ctx,
+            item.iconType,
+            contentX,
+            currentY,
+            iconSize,
+            "rgba(255, 255, 255, 0.85)"
+          );
 
-        items.forEach((item) => {
-          // Draw Emoji Icon
-          ctx.font = `${fontBaseSize}px sans-serif`;
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fillText(item.icon, contentX, currentY);
+          const textStartX = contentX + iconSize + Math.round(10 * scale);
 
-          // Draw Text Label
-          ctx.font = item.highlight
-            ? `800 ${fontBaseSize}px 'Plus Jakarta Sans', sans-serif`
-            : `600 ${fontBaseSize}px 'Plus Jakarta Sans', sans-serif`;
-          ctx.fillStyle = item.highlight ? "#818CF8" : "#F8FAFC";
-          
-          const iconSpacing = Math.round(fontBaseSize * 1.5);
-          ctx.fillText(item.text, contentX + iconSpacing, currentY);
+          if (item.isTabletCode) {
+            // Tablet Code: Visually Stronger (Bold, #5B4CF6 Primary Purple Accent)
+            ctx.font = `800 ${fontHeaderSize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
+            ctx.fillStyle = "#5B4CF6"; // Primary Purple Accent
+            ctx.fillText(item.label, textStartX, currentY);
 
-          currentY += lineHeight;
+            const tabletCodeWidth = ctx.measureText(item.label).width;
+
+            if (item.subLabel) {
+              ctx.font = `500 ${fontBodySize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
+              ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+              ctx.fillText(item.subLabel, textStartX + tabletCodeWidth + Math.round(4 * scale), currentY);
+            }
+          } else {
+            // Body Item Text: rgba(255,255,255,.78), Weight 500
+            ctx.font = `500 ${fontBodySize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+            ctx.fillText(item.label, textStartX, currentY);
+          }
+
+          currentY += rowHeight + Math.round(rowGap * 0.2);
         });
 
-        // 6. Draw Horizontal Divider Line
-        currentY += Math.round(lineHeight * 0.1);
+        // 6. Draw Divider Line (1px rgba(255,255,255,.12))
+        currentY += Math.round(4 * scale);
         ctx.beginPath();
         ctx.moveTo(contentX, currentY);
         ctx.lineTo(cardX + cardWidth - padding, currentY);
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // 7. Draw Company Branding Footer
-        currentY += Math.round(lineHeight * 0.65);
-        const logoSize = Math.round(fontBaseSize * 2.1);
+        // 7. Draw Branding Footer (Logo height 28–32px)
+        currentY += Math.round(dividerGap * 0.8) + Math.round(logoHeight / 2);
         const logoX = contentX;
-        const logoY = currentY;
+        const logoY = currentY - Math.round(logoHeight / 2);
 
-        // Draw Propan 3-Circle Symbol Icon
-        drawPropanSymbolOnCanvas(ctx, logoX, logoY, logoSize, "#818CF8", "#0F172A");
+        // Draw Official Propan Emblem Logo (Height 28-32px)
+        drawPropanOfficialEmblem(ctx, logoX, logoY, logoHeight, "#5B4CF6", "#FFFFFF");
 
-        // Footer Text (Center)
-        const textX = logoX + logoSize + Math.round(fontBaseSize * 0.6);
-        ctx.font = `800 ${Math.round(fontBaseSize * 0.95)}px 'Plus Jakarta Sans', sans-serif`;
+        // Footer Branding Text (Next to logo)
+        const brandTextX = logoX + logoHeight + Math.round(10 * scale);
+        ctx.font = `600 ${fontHeaderSize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
         ctx.fillStyle = "#FFFFFF";
-        ctx.fillText("TabMonitor Inspection", textX, currentY - Math.round(fontBaseSize * 0.35));
+        ctx.fillText("PT. PROPAN RAYA ICC", brandTextX, currentY - Math.round(fontFooterSize * 0.45));
 
-        ctx.font = `500 ${Math.round(fontBaseSize * 0.75)}px 'Plus Jakarta Sans', sans-serif`;
-        ctx.fillStyle = "#94A3B8";
-        ctx.fillText("Bukti Dokumentasi Resmi", textX, currentY + Math.round(fontBaseSize * 0.55));
+        ctx.font = `500 ${fontFooterSize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
+        ctx.fillText("Inspection Documentation", brandTextX, currentY + Math.round(fontFooterSize * 0.55));
 
-        // Right Badge: 🛡 Verified
-        const badgeX = cardX + cardWidth - padding;
-        ctx.font = `700 ${Math.round(fontBaseSize * 0.85)}px 'Plus Jakarta Sans', sans-serif`;
-        ctx.fillStyle = "#34D399"; // Emerald green
+        // Right Side Badge: Green Verified Shield Icon + Text "Verified" (#22C55E)
+        const badgeRightX = cardX + cardWidth - padding;
+        const shieldSize = Math.round(14 * scale);
+
+        ctx.font = `600 ${fontFooterSize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
+        ctx.fillStyle = "#22C55E";
         ctx.textAlign = "right";
-        ctx.fillText("🛡 Verified", badgeX, currentY);
+        ctx.fillText("Verified", badgeRightX, currentY);
+
+        const textWidth = ctx.measureText("Verified").width;
+        const shieldX = badgeRightX - textWidth - Math.round(18 * scale);
+
+        drawShieldIcon(ctx, shieldX, currentY, shieldSize, "#22C55E");
 
         ctx.restore();
 
@@ -265,23 +305,143 @@ export async function applyInspectionWatermark(
 }
 
 /**
- * Draw Propan 3-Circle Symbol onto Canvas Context
+ * Draw Lucide-style Outline Icons on Canvas
  */
-function drawPropanSymbolOnCanvas(
+function drawLucideOutlineIcon(
+  ctx: CanvasRenderingContext2D,
+  type: string,
+  x: number,
+  y: number,
+  size: number,
+  color: string
+) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(1.3, size * 0.1);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const half = size / 2;
+  const cx = x + half;
+  const cy = y;
+
+  if (type === "date") {
+    // Calendar Icon
+    ctx.beginPath();
+    ctx.rect(cx - half * 0.7, cy - half * 0.55, size * 0.7, size * 0.65);
+    ctx.moveTo(cx - half * 0.7, cy - half * 0.15);
+    ctx.lineTo(cx + half * 0.7, cy - half * 0.15);
+    ctx.moveTo(cx - half * 0.35, cy - half * 0.75);
+    ctx.lineTo(cx - half * 0.35, cy - half * 0.55);
+    ctx.moveTo(cx + half * 0.35, cy - half * 0.75);
+    ctx.lineTo(cx + half * 0.35, cy - half * 0.55);
+    ctx.stroke();
+  } else if (type === "time") {
+    // Clock Icon
+    ctx.beginPath();
+    ctx.arc(cx, cy, half * 0.75, 0, Math.PI * 2);
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy - half * 0.4);
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + half * 0.35, cy);
+    ctx.stroke();
+  } else if (type === "location") {
+    // Map Pin Icon
+    ctx.beginPath();
+    ctx.arc(cx, cy - half * 0.2, half * 0.45, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - half * 0.45, cy - half * 0.15);
+    ctx.quadraticCurveTo(cx, cy + half * 0.75, cx, cy + half * 0.75);
+    ctx.quadraticCurveTo(cx, cy + half * 0.75, cx + half * 0.45, cy - half * 0.15);
+    ctx.stroke();
+  } else if (type === "tablet") {
+    // Smartphone / Tablet Icon
+    ctx.beginPath();
+    ctx.rect(cx - half * 0.45, cy - half * 0.7, size * 0.45, size * 0.7);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy + half * 0.45, Math.max(1, size * 0.05), 0, Math.PI * 2);
+    ctx.fill();
+  } else if (type === "user") {
+    // User Icon
+    ctx.beginPath();
+    ctx.arc(cx, cy - half * 0.35, half * 0.35, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy + half * 0.65, half * 0.55, Math.PI, 0);
+    ctx.stroke();
+  } else if (type === "gps") {
+    // Globe / GPS Icon
+    ctx.beginPath();
+    ctx.arc(cx, cy, half * 0.75, 0, Math.PI * 2);
+    ctx.moveTo(cx - half * 0.75, cy); ctx.lineTo(cx + half * 0.75, cy);
+    ctx.moveTo(cx, cy - half * 0.75); ctx.lineTo(cx, cy + half * 0.75);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/**
+ * Draw Green Verified Shield Icon on Canvas Context
+ */
+function drawShieldIcon(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   size: number,
+  color: string
+) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(1.4, size * 0.12);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const half = size / 2;
+  const cx = x + half;
+  const cy = y;
+
+  // Shield Path
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - half * 0.75);
+  ctx.lineTo(cx + half * 0.65, cy - half * 0.5);
+  ctx.quadraticCurveTo(cx + half * 0.65, cy + half * 0.3, cx, cy + half * 0.8);
+  ctx.quadraticCurveTo(cx - half * 0.65, cy + half * 0.3, cx - half * 0.65, cy - half * 0.5);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Checkmark inside shield
+  ctx.beginPath();
+  ctx.moveTo(cx - half * 0.3, cy - half * 0.05);
+  ctx.lineTo(cx - half * 0.05, cy + half * 0.2);
+  ctx.lineTo(cx + half * 0.35, cy - half * 0.25);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/**
+ * Draw Official Propan 3-Circle Symbol Icon
+ */
+function drawPropanOfficialEmblem(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  height: number,
   color: string,
   holeColor: string
 ) {
   ctx.save();
+  const size = height;
   const cx = x + size / 2;
-  const cy = y;
+  const cy = y + size / 2;
 
   const rOuter = size * 0.23;
   const rInner = size * 0.08;
-  const lw = Math.max(1, size * 0.035);
+  const lw = Math.max(1, size * 0.04);
 
   const topC = { x: cx, y: cy - size * 0.22 };
   const botLC = { x: cx - size * 0.22, y: cy + size * 0.16 };
@@ -301,10 +461,11 @@ function drawPropanSymbolOnCanvas(
     ctx.fill();
   });
 
-  // Top Circle Lines
+  // Lines
   ctx.strokeStyle = holeColor;
   ctx.lineWidth = lw;
 
+  // Top Circle Lines
   ctx.beginPath();
   ctx.moveTo(topC.x, topC.y + rInner); ctx.lineTo(topC.x, topC.y + rOuter);
   ctx.moveTo(topC.x - rInner*0.7, topC.y + rInner*0.7); ctx.lineTo(topC.x - rOuter*0.7, topC.y + rOuter*0.7);
