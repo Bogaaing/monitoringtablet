@@ -64,19 +64,9 @@ export async function applyInspectionWatermark(
 ): Promise<WatermarkResult> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const propanLogoImg = new Image();
-    propanLogoImg.crossOrigin = "anonymous";
-    propanLogoImg.src = "/propan-logo.svg";
 
-    img.onload = async () => {
+    img.onload = () => {
       try {
-        // Ensure propanLogoImg is loaded if possible
-        if (!propanLogoImg.complete) {
-          await new Promise<void>((res) => {
-            propanLogoImg.onload = () => res();
-            propanLogoImg.onerror = () => res();
-          });
-        }
         // 1. Calculate Target Canvas Dimensions (Max width 1600px)
         const MAX_WIDTH = 1600;
         let width = img.width;
@@ -127,8 +117,7 @@ export async function applyInspectionWatermark(
 
         const rowHeight = Math.round(fontBodySize * 1.6);
         const bodyHeight = textRowsCount * rowHeight + (textRowsCount - 1) * (rowGap * 0.3);
-        const logoHeight = Math.round(38 * scale); // 36-40px high
-        const footerHeight = Math.max(logoHeight, Math.round(fontHeaderSize * 2.2));
+        const footerHeight = Math.round(fontHeaderSize * 2.2);
         const dividerGap = Math.round(12 * scale);
 
         const cardHeight = padding * 2 + bodyHeight + dividerGap * 2 + 1 + footerHeight;
@@ -239,23 +228,11 @@ export async function applyInspectionWatermark(
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // 7. Draw Branding Footer (Logo height 28–38px)
-        currentY += Math.round(dividerGap * 0.8) + Math.round(logoHeight / 2);
-        const logoX = contentX;
-        const logoY = currentY - Math.round(logoHeight / 2);
+        // 7. Draw Branding Footer
+        currentY += Math.round(dividerGap * 0.8) + Math.round(fontHeaderSize * 0.6);
+        const brandTextX = contentX;
 
-        // Draw Official Propan Logo Image or Vector Fallback
-        let logoWidthUsed = logoHeight;
-        if (propanLogoImg.complete && propanLogoImg.naturalWidth > 0) {
-          const logoAspect = propanLogoImg.naturalWidth / propanLogoImg.naturalHeight;
-          logoWidthUsed = Math.round(logoHeight * logoAspect);
-          ctx.drawImage(propanLogoImg, logoX, logoY, logoWidthUsed, logoHeight);
-        } else {
-          drawPropanOfficialEmblem(ctx, logoX, logoY, logoHeight, "#5B4CF6", "#FFFFFF");
-        }
-
-        // Footer Branding Text (Next to logo)
-        const brandTextX = logoX + logoWidthUsed + Math.round(10 * scale);
+        // Footer Branding Text
         ctx.font = `600 ${fontHeaderSize}px 'Inter', 'Plus Jakarta Sans', sans-serif`;
         ctx.fillStyle = "#FFFFFF";
         ctx.fillText("PT. PROPAN RAYA ICC", brandTextX, currentY - Math.round(fontFooterSize * 0.45));
@@ -439,68 +416,4 @@ function drawShieldIcon(
   ctx.restore();
 }
 
-/**
- * Draw Official Propan 3-Circle Symbol Icon
- */
-function drawPropanOfficialEmblem(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  height: number,
-  color: string,
-  holeColor: string
-) {
-  ctx.save();
-  const size = height;
-  const cx = x + size / 2;
-  const cy = y + size / 2;
 
-  const rOuter = size * 0.23;
-  const rInner = size * 0.08;
-  const lw = Math.max(1, size * 0.04);
-
-  const topC = { x: cx, y: cy - size * 0.22 };
-  const botLC = { x: cx - size * 0.22, y: cy + size * 0.16 };
-  const botRC = { x: cx + size * 0.22, y: cy + size * 0.16 };
-
-  [topC, botLC, botRC].forEach((c) => {
-    // Outer Circle
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, rOuter, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    // Inner Hole
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, rInner, 0, Math.PI * 2);
-    ctx.fillStyle = holeColor;
-    ctx.fill();
-  });
-
-  // Lines
-  ctx.strokeStyle = holeColor;
-  ctx.lineWidth = lw;
-
-  // Top Circle Lines
-  ctx.beginPath();
-  ctx.moveTo(topC.x, topC.y + rInner); ctx.lineTo(topC.x, topC.y + rOuter);
-  ctx.moveTo(topC.x - rInner*0.7, topC.y + rInner*0.7); ctx.lineTo(topC.x - rOuter*0.7, topC.y + rOuter*0.7);
-  ctx.moveTo(topC.x + rInner*0.7, topC.y + rInner*0.7); ctx.lineTo(topC.x + rOuter*0.7, topC.y + rOuter*0.7);
-  ctx.stroke();
-
-  // Bottom-Left Circle Lines
-  ctx.beginPath();
-  ctx.moveTo(botLC.x, botLC.y - rInner); ctx.lineTo(botLC.x, botLC.y - rOuter);
-  ctx.moveTo(botLC.x + rInner*0.7, botLC.y + rInner*0.7); ctx.lineTo(botLC.x + rOuter*0.7, botLC.y + rOuter*0.7);
-  ctx.moveTo(botLC.x + rInner*0.8, botLC.y - rInner*0.5); ctx.lineTo(botLC.x + rOuter*0.8, botLC.y - rOuter*0.5);
-  ctx.stroke();
-
-  // Bottom-Right Circle Lines
-  ctx.beginPath();
-  ctx.moveTo(botRC.x, botRC.y - rInner); ctx.lineTo(botRC.x, botRC.y - rOuter);
-  ctx.moveTo(botRC.x - rInner*0.7, botRC.y + rInner*0.7); ctx.lineTo(botRC.x - rOuter*0.7, botRC.y + rOuter*0.7);
-  ctx.moveTo(botRC.x - rInner*0.8, botRC.y - rInner*0.5); ctx.lineTo(botRC.x - rOuter*0.8, botRC.y - rOuter*0.5);
-  ctx.stroke();
-
-  ctx.restore();
-}
