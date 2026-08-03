@@ -305,6 +305,34 @@ export const inspectionsService = {
             }))
           );
         }
+
+        // Save Enterprise Audit Trail Log in activity_logs
+        try {
+          await supabase.from("activity_logs").insert([
+            {
+              user_id: validPicId,
+              action: "INSPECTION_SUBMITTED",
+              details: {
+                inspection_id: inspectionId,
+                period_id: payload.period_id,
+                tablet_id: payload.tablet_id,
+                tablet_code: payload.tablet_code,
+                pic_id: validPicId,
+                submitted_at: new Date().toISOString(),
+                gps_lat: payload.gps_lat || null,
+                gps_lng: payload.gps_lng || null,
+                photos_count: uploadedPhotos.length,
+                watermark_status: "AUTOMATIC_GLASSMORPHISM_PERMANENT",
+                photos_meta: uploadedPhotos.map((p) => ({
+                  photo_id: p.id,
+                  photo_url: p.photo_url,
+                  photo_type: p.photo_type,
+                })),
+              },
+            },
+          ]);
+        } catch (logErr) {}
+
         return { ...data, photos: uploadedPhotos } as unknown as Inspection;
       }
 

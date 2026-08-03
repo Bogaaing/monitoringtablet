@@ -14,7 +14,20 @@ export const storageService = {
   ): Promise<{ path: string; publicUrl: string }> {
     const monthStr = String(month).padStart(2, "0");
     const cleanTabletCode = tabletCode.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `${photoType}_${Date.now()}.jpg`;
+
+    // Use file.name if already formatted like TAB-001_20260802_093528.jpg, or generate
+    let filename = (file as File).name;
+    if (!filename || !filename.endsWith(".jpg")) {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const hh = String(now.getHours()).padStart(2, "0");
+      const min = String(now.getMinutes()).padStart(2, "0");
+      const ss = String(now.getSeconds()).padStart(2, "0");
+      filename = `${cleanTabletCode}_${yyyy}${mm}${dd}_${hh}${min}${ss}_${photoType}.jpg`;
+    }
+
     const path = `${year}/${monthStr}/${cleanTabletCode}/${filename}`;
 
     try {

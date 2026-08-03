@@ -38,6 +38,7 @@ export default function PicScanPage() {
   useEffect(() => {
     periodsService.getActivePeriod().then((p) => setActivePeriod(p));
     authService.getCurrentProfile().then((u) => setCurrentUser(u));
+    offlineSyncService.initAutoSync();
   }, []);
 
   // Auto-scan if ?qr= query param is provided (from Tasks page)

@@ -100,4 +100,13 @@ export const offlineSyncService = {
       localStorage.removeItem(STORAGE_KEY);
     }
   },
+
+  initAutoSync(): void {
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", () => {
+        console.log("[OfflineSync] Network online. Auto-synchronizing pending inspections...");
+        this.syncAll();
+      });
+    }
+  },
 };

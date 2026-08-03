@@ -24,6 +24,11 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
+import { WatermarkPreviewModal } from "@/components/pic/watermark-preview-modal";
+import { WatermarkResult } from "@/lib/watermark-utils";
+import { authService } from "@/services/auth.service";
+import { ShieldCheck } from "lucide-react";
+
 interface InspectionFormProps {
   tablet: Tablet;
   activePeriod: InspectionPeriod;
@@ -59,13 +64,22 @@ export function InspectionForm({
     { file: File; previewUrl: string; type: PhotoType }[]
   >([]);
 
+  // Watermark Modal state
+  const [isWatermarkModalOpen, setIsWatermarkModalOpen] = useState(false);
+  const [targetPhotoType, setTargetPhotoType] = useState<PhotoType>("front");
+  const [picName, setPicName] = useState<string>("Ahmad Rizky");
+
   // GPS Location
   const [gpsLocation, setGpsLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Auto-acquire Geolocation on mount
+  // Fetch current PIC profile & Auto-acquire Geolocation on mount
   useEffect(() => {
+    authService.getCurrentProfile().then((user) => {
+      if (user?.name) setPicName(user.name);
+    });
+
     if (typeof window !== "undefined" && "geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -77,17 +91,20 @@ export function InspectionForm({
     }
   }, []);
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>, photoType: PhotoType) => {
-    if (!e.target.files || e.target.files.length === 0) return;
+  const handleOpenWatermarkModal = (type: PhotoType) => {
     if (selectedPhotos.length >= 5) {
       alert("Maksimal 5 foto dapat diunggah per inspeksi.");
       return;
     }
+    setTargetPhotoType(type);
+    setIsWatermarkModalOpen(true);
+  };
 
-    const file = e.target.files[0];
-    const previewUrl = URL.createObjectURL(file);
-
-    setSelectedPhotos((prev) => [...prev, { file, previewUrl, type: photoType }]);
+  const handleWatermarkConfirmed = (result: WatermarkResult, photoType: PhotoType) => {
+    setSelectedPhotos((prev) => [
+      ...prev,
+      { file: result.file, previewUrl: result.previewUrl, type: photoType },
+    ]);
   };
 
   const handleRemovePhoto = (index: number) => {
@@ -328,38 +345,52 @@ export function InspectionForm({
                   >
                     <X className="h-3 w-3" />
                   </button>
-                  <span className="absolute bottom-1 left-1 right-1 bg-slate-900/70 text-white text-[9px] font-bold text-center rounded px-1 uppercase">
+                  <span className="absolute top-1 left-1 bg-emerald-500/90 text-white text-[8px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm">
+                    <ShieldCheck className="w-2.5 h-2.5" />
+                    <span>WM</span>
+                  </span>
+                  <span className="absolute bottom-1 left-1 right-1 bg-slate-900/80 text-white text-[9px] font-bold text-center rounded px-1 uppercase truncate">
                     {photo.type}
                   </span>
                 </div>
               ))}
 
               {selectedPhotos.length < 5 && (
-                <label className="aspect-square rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-800 hover:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col items-center justify-center cursor-pointer p-2 text-center transition-all">
-                  <Camera className="h-6 w-6 text-indigo-600 mb-1" />
-                  <span className="text-[10px] font-bold text-indigo-600">+ Tambah Foto</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={(e) =>
-                      handlePhotoSelect(
-                        e,
-                        selectedPhotos.length === 0
-                          ? "front"
-                          : selectedPhotos.length === 1
-                          ? "back"
-                          : selectedPhotos.length === 2
-                          ? "screen"
-                          : "accessory"
-                      )
-                    }
-                    className="hidden"
-                  />
-                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleOpenWatermarkModal(
+                      selectedPhotos.length === 0
+                        ? "front"
+                        : selectedPhotos.length === 1
+                        ? "back"
+                        : selectedPhotos.length === 2
+                        ? "screen"
+                        : "accessory"
+                    )
+                  }
+                  className="aspect-square rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-800 hover:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col items-center justify-center p-2 text-center transition-all group"
+                >
+                  <Camera className="h-6 w-6 text-indigo-600 mb-1 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-bold text-indigo-600">+ Ambil Foto</span>
+                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">Auto-Watermark</span>
+                </button>
               )}
             </div>
           </div>
+
+          {/* Watermark Capture & Preview Modal */}
+          <WatermarkPreviewModal
+            isOpen={isWatermarkModalOpen}
+            onClose={() => setIsWatermarkModalOpen(false)}
+            onConfirmPhoto={handleWatermarkConfirmed}
+            photoType={targetPhotoType}
+            tabletCode={tablet.qr_code}
+            deviceModel={tablet.model ? `${tablet.model} (${tablet.brand})` : undefined}
+            assignedLocation={tablet.location?.name || "Gudang Utama A"}
+            picName={picName}
+            gpsCoords={gpsLocation}
+          />
 
           {/* Form Actions */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
