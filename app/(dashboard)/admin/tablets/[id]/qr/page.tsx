@@ -7,7 +7,8 @@ import { tabletsService } from "@/services/tablets.service";
 import { Tablet } from "@/types";
 import { downloadQrCanvas, printQrSticker } from "@/lib/qr-utils";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Download, Tablet as TabletIcon, QrCode } from "lucide-react";
+import { ArrowLeft, Printer, Download } from "lucide-react";
+import { PropanLogo } from "@/components/ui/propan-logo";
 
 export default function TabletQrPreviewPage() {
   const params = useParams();
@@ -85,9 +86,21 @@ export default function TabletQrPreviewPage() {
           id={containerId}
           className="p-8 bg-white text-slate-900 rounded-2xl border-4 border-slate-950 flex flex-col items-center justify-center text-center space-y-4 w-[320px] print:w-full print:border-4 print:border-black"
         >
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-800 border-b-2 border-slate-900 pb-2 w-full justify-center">
-            <TabletIcon className="h-4 w-4 text-indigo-600" />
-            <span>PROPERTY OF COMPANY</span>
+          {/* Header: [ PROPAN LOGO ] PT. PROPAN RAYA ICC */}
+          <div className="flex items-center justify-center gap-2.5 border-b-2 border-slate-200 pb-3 w-full">
+            <PropanLogo height={32} className="h-8 w-auto shrink-0" color="#2E2A7B" />
+            <span
+              className="font-bold text-[#2E2A7B] tracking-wide text-center whitespace-nowrap"
+              style={{
+                fontSize: "15px",
+                fontWeight: 700,
+                color: "#2E2A7B",
+                letterSpacing: "0.03em",
+                lineHeight: "1.2",
+              }}
+            >
+              PT. PROPAN RAYA ICC
+            </span>
           </div>
 
           <div className="p-3 bg-white rounded-2xl border-2 border-slate-300 shadow-inner">
@@ -99,18 +112,18 @@ export default function TabletQrPreviewPage() {
             />
           </div>
 
-          <div className="space-y-1 w-full pt-2 border-t-2 border-slate-900">
-            <div className="font-mono text-xl font-black text-indigo-950 tracking-wider">
-              {tablet.qr_code}
+          <div className="space-y-1 w-full pt-3 border-t-2 border-slate-200 text-center">
+            <div className="font-mono text-xl font-black text-[#2E2A7B] tracking-wider uppercase">
+              {tablet.qr_code || "TB 04"}
             </div>
             <div className="text-xs font-bold text-slate-800 truncate">
-              {tablet.model} ({tablet.brand || "Samsung"})
+              {tablet.model ? (tablet.brand ? `${tablet.model} (${tablet.brand})` : tablet.model) : "Exproof (P9000)"}
             </div>
-            <div className="text-[11px] font-mono text-slate-600">
-              S/N: {tablet.serial_number}
+            <div className="text-[11px] font-mono text-slate-600 font-medium">
+              S/N: {tablet.serial_number || "3559.2810.1240.862"}
             </div>
             <div className="text-[11px] font-semibold text-slate-700 truncate">
-              Lokasi: {tablet.location?.name || "Belum Ditempatkan"}
+              Loc: {tablet.location?.name || "Politur"}
             </div>
           </div>
         </div>

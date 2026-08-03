@@ -3,11 +3,30 @@ export function generateUniqueQrCode(): string {
   return `QR-TAB-${random}`;
 }
 
-export function downloadQrCanvas(elementId: string, filename: string = "tablet-qr-code.png") {
+export async function downloadQrCanvas(elementId: string, filename: string = "tablet-qr-code.png") {
   if (typeof window === "undefined") return;
 
   const container = document.getElementById(elementId);
   if (!container) return;
+
+  try {
+    const html2canvas = (await import("html2canvas")).default;
+    const canvas = await html2canvas(container, {
+      scale: 3,
+      useCORS: true,
+      backgroundColor: "#FFFFFF",
+    });
+    const image = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = image;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  } catch (err) {
+    console.warn("html2canvas fallback:", err);
+  }
 
   const canvas = container.querySelector("canvas");
   if (canvas) {

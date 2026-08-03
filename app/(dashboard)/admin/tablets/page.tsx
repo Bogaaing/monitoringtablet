@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
+import { PropanLogo } from "@/components/ui/propan-logo";
 
 export default function AdminTabletsPage() {
   const [tablets, setTablets] = useState<Tablet[]>([]);
@@ -496,18 +497,26 @@ export default function AdminTabletsPage() {
               {tablets.map((tab) => (
                 <div
                   key={tab.id}
-                  className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col items-center text-center space-y-2 shadow-sm"
+                  className="p-4 bg-white dark:bg-slate-800 border-2 border-slate-900 rounded-2xl flex flex-col items-center text-center space-y-2 shadow-sm"
                 >
-                  <QRCodeSVG value={tab.qr_code} size={110} level="H" />
-                  <span className="font-mono text-xs font-black text-slate-900 dark:text-slate-100">
-                    {tab.qr_code}
-                  </span>
-                  <div className="text-[10px] text-slate-500 font-medium">
-                    {tab.brand} {tab.model}
+                  <div className="flex items-center justify-center gap-1.5 border-b border-slate-200 dark:border-slate-700 pb-1.5 w-full">
+                    <PropanLogo height={18} className="h-4.5 w-auto shrink-0" color="#2E2A7B" />
+                    <span className="font-bold text-[10px] text-[#2E2A7B] tracking-wider whitespace-nowrap">
+                      PT. PROPAN RAYA ICC
+                    </span>
                   </div>
-                  <span className="text-[9px] font-mono text-slate-400">
-                    SN: {tab.serial_number}
-                  </span>
+                  <QRCodeSVG value={tab.qr_code} size={110} level="H" />
+                  <div className="space-y-0.5 w-full pt-1 border-t border-slate-200 dark:border-slate-700">
+                    <span className="font-mono text-xs font-black text-[#2E2A7B]">
+                      {tab.qr_code}
+                    </span>
+                    <div className="text-[10px] text-slate-600 font-bold truncate">
+                      {tab.model} ({tab.brand})
+                    </div>
+                    <div className="text-[9px] font-mono text-slate-500">
+                      S/N: {tab.serial_number}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
