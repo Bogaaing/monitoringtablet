@@ -16,16 +16,13 @@ export default function LoginPage() {
             {/* Brand Header Component */}
             <BrandHeader />
 
-            {/* Navigation Tabs / Security Badge Component */}
-            <SecurityBadge />
-
             {/* Welcome Heading */}
             <div className="mb-7">
               <h2 className="text-3xl sm:text-[40px] font-extrabold text-slate-900 tracking-tight mb-3 leading-none">
-                Welcome Back
+                Selamat Datang
               </h2>
               <p className="text-slate-500 text-sm font-normal">
-                Sign in to access your monitoring dashboard.
+                Silahkan login untuk melanjutkan inspeksi dan Monitoring Tablet
               </p>
             </div>
 
