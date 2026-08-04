@@ -41,10 +41,11 @@ export default function PicDashboardPage() {
       setActivePeriod(p);
 
       try {
-        const [tabRes, inspRes] = await Promise.all([
-          tabletsService.getTablets({ locationId: u?.location_id || undefined, limit: 200 }),
-          inspectionsService.getInspections({ periodId: p?.id, limit: 200 }),
-        ]);
+        let tabRes = await tabletsService.getTablets({ locationId: u?.location_id || undefined, limit: 500 });
+        if ((!tabRes.data || tabRes.data.length === 0) && u?.location_id) {
+          tabRes = await tabletsService.getTablets({ limit: 500 });
+        }
+        const inspRes = await inspectionsService.getInspections({ periodId: p?.id, limit: 500 });
 
         setAssignedTabletsCount(tabRes.data.length || 0);
         setInspectionsList(inspRes.data || []);

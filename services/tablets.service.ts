@@ -6,7 +6,7 @@ import { generateUniqueQrCode } from "@/lib/qr-utils";
 export const tabletsService = {
   async getTablets(params?: PaginationParams): Promise<PaginatedResult<Tablet>> {
     const page = params?.page || 1;
-    const limit = params?.limit || 10;
+    const limit = params?.limit || 100;
     const search = params?.search?.toLowerCase() || "";
     const status = params?.status;
     const locationId = params?.locationId;
