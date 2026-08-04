@@ -8,7 +8,7 @@ import { StatGradientCard } from "@/components/dashboard/stat-gradient-card";
 import { GlassCard } from "@/components/dashboard/glass-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { BulkActionBar } from "@/components/shared/bulk-action-bar";
+import { BulkActionBar, SelectedItemSummary } from "@/components/shared/bulk-action-bar";
 import { inspectionsService, Inspection } from "@/services/inspections.service";
 import { locationsService } from "@/services/locations.service";
 import { authService } from "@/services/auth.service";
@@ -27,7 +27,7 @@ import {
   ShieldCheck,
   Send,
   CheckSquare,
-  Square,
+  Check,
 } from "lucide-react";
 
 export default function ManagerApprovalsPage() {
@@ -155,6 +155,15 @@ export default function ManagerApprovalsPage() {
     setSelectedIds([]);
   };
 
+  // Selected item summaries for preview (≤ 3 items)
+  const selectedSummaries: SelectedItemSummary[] = inspections
+    .filter((ins) => selectedIds.includes(ins.id))
+    .map((ins) => ({
+      id: ins.id,
+      tabletCode: ins.tablet?.qr_code || "QR-TAB",
+      picName: ins.pic?.name ? ins.pic.name.split(" ")[0] : "PIC",
+    }));
+
   // Single Approval Action
   const handleApprove = async (inspectionId: string) => {
     setActionLoading(true);
@@ -162,7 +171,7 @@ export default function ManagerApprovalsPage() {
       const reviewerId = currentUser?.id || "30000000-0000-0000-0000-000000000003";
       await inspectionsService.reviewInspection(inspectionId, reviewerId, "approved");
       setSelectedInspection(null);
-      showToast("Inspeksi telah berhasil disetujui.", "success");
+      showToast("✓ 1 inspeksi berhasil disetujui.", "success");
       fetchApprovalData();
     } catch (e) {
       showToast("Gagal menyetujui inspeksi.", "error");
@@ -191,7 +200,7 @@ export default function ManagerApprovalsPage() {
       setShowRejectModal(false);
       setRejectionReason("");
       setSelectedInspection(null);
-      showToast("Inspeksi telah ditolak.", "info");
+      showToast("✓ 1 inspeksi berhasil ditolak.", "info");
       fetchApprovalData();
     } catch (e) {
       showToast("Gagal menolak inspeksi.", "error");
@@ -216,10 +225,10 @@ export default function ManagerApprovalsPage() {
       setShowBulkConfirmModal(null);
 
       if (res.failedIds.length === 0) {
-        showToast(`${count} ${count === 1 ? "inspection" : "inspections"} approved successfully.`, "success");
+        showToast(`✓ ${count} inspeksi berhasil disetujui.`, "success");
         setSelectedIds([]);
       } else {
-        showToast(`${res.successCount} Approved, ${res.failedIds.length} Failed`, "error");
+        showToast(`${res.successCount} Disetujui, ${res.failedIds.length} Gagal`, "error");
         setSelectedIds(res.failedIds); // Keep failed IDs selected for retry
       }
 
@@ -255,10 +264,10 @@ export default function ManagerApprovalsPage() {
       setBulkRejectionReason("");
 
       if (res.failedIds.length === 0) {
-        showToast(`${count} ${count === 1 ? "inspection" : "inspections"} rejected successfully.`, "info");
+        showToast(`✓ ${count} inspeksi berhasil ditolak.`, "info");
         setSelectedIds([]);
       } else {
-        showToast(`${res.successCount} Rejected, ${res.failedIds.length} Failed`, "error");
+        showToast(`${res.successCount} Ditolak, ${res.failedIds.length} Gagal`, "error");
         setSelectedIds(res.failedIds); // Keep failed IDs selected for retry
       }
 
@@ -271,7 +280,7 @@ export default function ManagerApprovalsPage() {
   };
 
   return (
-    <div className="space-y-8 relative pb-20">
+    <div className="space-y-8 relative pb-24">
       {/* Toast Notification Container */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -285,7 +294,7 @@ export default function ManagerApprovalsPage() {
             }`}
           >
             {toastMessage.type === "success" ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+              <Check className="h-5 w-5 text-emerald-400 shrink-0 stroke-[3]" />
             ) : (
               <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0" />
             )}
@@ -365,6 +374,37 @@ export default function ManagerApprovalsPage() {
         ]}
       />
 
+      {/* Clearer Selection Header Control ("Pilih Semua" Control above the Inspection List) */}
+      {isManager && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+          <label className="flex items-center gap-3 cursor-pointer select-none group min-h-[44px]">
+            <input
+              type="checkbox"
+              aria-label="Pilih Semua Inspeksi"
+              checked={isAllPendingSelected}
+              onChange={toggleSelectAll}
+              disabled={selectablePendingItems.length === 0}
+              className="w-5 h-5 rounded-md border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition disabled:opacity-30 disabled:cursor-not-allowed"
+            />
+            <span className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              Pilih Semua
+            </span>
+            {selectablePendingItems.length > 0 && (
+              <span className="text-xs font-medium text-slate-400 font-mono">
+                ({selectablePendingItems.length} Menunggu Review)
+              </span>
+            )}
+          </label>
+
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-3.5 py-1.5 rounded-xl border border-indigo-200/60 dark:border-indigo-900/50">
+              <CheckSquare className="h-4 w-4" />
+              <span>{selectedIds.length} Inspeksi Dipilih</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Queue Table */}
       <GlassCard className="p-0 overflow-hidden" glowColor="indigo">
         <Table>
@@ -372,14 +412,7 @@ export default function ManagerApprovalsPage() {
             <TableRow>
               {isManager && (
                 <TableHead className="w-12 text-center">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all pending inspections"
-                    checked={isAllPendingSelected}
-                    onChange={toggleSelectAll}
-                    disabled={selectablePendingItems.length === 0}
-                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition disabled:opacity-30 disabled:cursor-not-allowed"
-                  />
+                  <span className="sr-only">Pilih</span>
                 </TableHead>
               )}
               <TableHead>Kode Tablet</TableHead>
@@ -426,7 +459,7 @@ export default function ManagerApprovalsPage() {
                           checked={isSelected}
                           onChange={() => toggleSelectOne(ins.id)}
                           disabled={!isPending}
-                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition disabled:opacity-20 disabled:cursor-not-allowed"
+                          className="w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition disabled:opacity-20 disabled:cursor-not-allowed"
                         />
                       </TableCell>
                     )}
@@ -460,7 +493,7 @@ export default function ManagerApprovalsPage() {
                       <Button
                         size="sm"
                         onClick={() => setSelectedInspection(ins)}
-                        className="text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                        className="text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold min-h-[36px]"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         <span>Review & Approval</span>
@@ -474,10 +507,11 @@ export default function ManagerApprovalsPage() {
         </Table>
       </GlassCard>
 
-      {/* Sticky Bulk Action Bar for Manager Role */}
+      {/* Refined Floating Bottom Action Bar for Manager Role */}
       {isManager && (
         <BulkActionBar
           selectedCount={selectedIds.length}
+          selectedSummaries={selectedSummaries}
           onApproveSelected={() => setShowBulkConfirmModal("approve")}
           onRejectSelected={() => setShowBulkConfirmModal("reject")}
           onClearSelection={handleClearSelection}
@@ -488,45 +522,48 @@ export default function ManagerApprovalsPage() {
       {/* Bulk Approve Confirmation Modal */}
       {showBulkConfirmModal === "approve" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in zoom-in-95">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h4 className="text-base font-bold text-emerald-600 flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5" />
-                <span>Konfirmasi Bulk Approval</span>
+                <span>Konfirmasi Persetujuan</span>
               </h4>
               <button
                 type="button"
                 onClick={() => setShowBulkConfirmModal(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
-              Approve <strong className="text-indigo-600 font-bold">{selectedIds.length}</strong> selected {selectedIds.length === 1 ? "inspection" : "inspections"}?
-            </p>
-            <p className="text-xs text-slate-500">
-              Seluruh inspeksi yang dipilih akan langsung diverifikasi dan statusnya diubah menjadi Approved.
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-slate-800 dark:text-slate-200 font-medium">
+                Anda akan menyetujui <strong className="text-indigo-600 dark:text-indigo-400 font-bold">{selectedIds.length}</strong> hasil inspeksi.
+              </p>
+              <p className="text-xs text-slate-500">
+                Lanjutkan proses verifikasi massal ini?
+              </p>
+            </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowBulkConfirmModal(null)}
                 disabled={actionLoading}
+                className="min-h-[48px] px-5 rounded-xl font-semibold text-xs"
               >
-                Cancel
+                Batal
               </Button>
               <Button
                 type="button"
                 disabled={actionLoading}
                 onClick={handleExecuteBulkApprove}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs"
+                className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs min-h-[48px] px-6 rounded-xl gap-2"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                <span>{actionLoading ? "Memproses..." : "Approve"}</span>
+                <span>{actionLoading ? "Memproses..." : "Ya, Approve"}</span>
               </Button>
             </div>
           </div>
@@ -543,23 +580,25 @@ export default function ManagerApprovalsPage() {
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h4 className="text-base font-bold text-rose-600 flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5" />
-                <span>Konfirmasi Bulk Rejection</span>
+                <span>Konfirmasi Penolakan Massal</span>
               </h4>
               <button
                 type="button"
                 onClick={() => setShowBulkConfirmModal(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
-              Reject <strong className="text-rose-600 font-bold">{selectedIds.length}</strong> selected {selectedIds.length === 1 ? "inspection" : "inspections"}?
-            </p>
-            <p className="text-xs text-slate-500">
-              Masukkan alasan penolakan yang akan berlaku untuk seluruh pengajuan inspeksi yang dipilih.
-            </p>
+            <div className="space-y-1">
+              <p className="text-sm text-slate-800 dark:text-slate-200 font-medium">
+                Anda akan menolak <strong className="text-rose-600 font-bold">{selectedIds.length}</strong> hasil inspeksi.
+              </p>
+              <p className="text-xs text-slate-500">
+                Alasan penolakan ini akan diberikan ke seluruh PIC pengirim inspeksi.
+              </p>
+            </div>
 
             <textarea
               rows={3}
@@ -570,22 +609,23 @@ export default function ManagerApprovalsPage() {
               className="w-full p-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500"
             />
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowBulkConfirmModal(null)}
                 disabled={actionLoading}
+                className="min-h-[48px] px-5 rounded-xl font-semibold text-xs"
               >
-                Cancel
+                Batal
               </Button>
               <Button
                 type="submit"
                 disabled={actionLoading}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-2 text-xs"
+                className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs min-h-[48px] px-6 rounded-xl gap-2"
               >
                 <Send className="h-3.5 w-3.5" />
-                <span>{actionLoading ? "Memproses..." : "Reject"}</span>
+                <span>{actionLoading ? "Memproses..." : "Ya, Reject"}</span>
               </Button>
             </div>
           </form>
@@ -613,7 +653,7 @@ export default function ManagerApprovalsPage() {
               </div>
               <button
                 onClick={() => setSelectedInspection(null)}
-                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600"
+                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -725,7 +765,7 @@ export default function ManagerApprovalsPage() {
                   type="button"
                   disabled={actionLoading}
                   onClick={() => setShowRejectModal(true)}
-                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-2 text-xs"
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-2 text-xs min-h-[44px] px-4"
                 >
                   <XCircle className="h-4 w-4" />
                   <span>Tolak (Reject)</span>
@@ -735,7 +775,7 @@ export default function ManagerApprovalsPage() {
                   type="button"
                   disabled={actionLoading}
                   onClick={() => handleApprove(selectedInspection.id)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs min-h-[44px] px-5"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   <span>{actionLoading ? "Memproses..." : "Setujui (Approve)"}</span>
@@ -761,7 +801,7 @@ export default function ManagerApprovalsPage() {
               <button
                 type="button"
                 onClick={() => setShowRejectModal(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -786,13 +826,14 @@ export default function ManagerApprovalsPage() {
                 variant="outline"
                 onClick={() => setShowRejectModal(false)}
                 disabled={actionLoading}
+                className="min-h-[44px]"
               >
                 Batal
               </Button>
               <Button
                 type="submit"
                 disabled={actionLoading}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-2 text-xs"
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-2 text-xs min-h-[44px]"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>{actionLoading ? "Menyimpan..." : "Kirim Penolakan"}</span>
