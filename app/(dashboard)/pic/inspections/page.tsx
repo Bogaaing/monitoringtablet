@@ -9,16 +9,25 @@ import { Button } from "@/components/ui/button";
 import { inspectionsService, Inspection } from "@/services/inspections.service";
 import { authService } from "@/services/auth.service";
 import { User } from "@/types";
-import { QrCode, MapPin, Eye, X } from "lucide-react";
+import { QrCode, MapPin, Eye, X, SearchX } from "lucide-react";
 
 export default function PicInspectionsPage() {
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
   const [activePhotoUrl, setActivePhotoUrl] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  // ─── Debounce Search (300ms) ──────────────────────────────────────────────
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   useEffect(() => {
     authService.getCurrentProfile().then((u) => setCurrentUser(u));
@@ -54,22 +63,30 @@ export default function PicInspectionsPage() {
     fetchInspections();
   }, [currentUser, statusFilter]);
 
+  // ─── Filter logic matching tablet_code, tablet_name, location_name ────────
   const filteredList = inspections.filter((ins) => {
-    if (!search) return true;
-    const s = search.toLowerCase();
+    if (!debouncedSearch.trim()) return true;
+    const s = debouncedSearch.toLowerCase().trim();
+    const qrCode = ins.tablet?.qr_code?.toLowerCase() || "";
+    const model = ins.tablet?.model?.toLowerCase() || "";
+    const brand = ins.tablet?.brand?.toLowerCase() || "";
+    const fullName = `${brand} ${model}`.toLowerCase();
+    const locationName = ins.tablet?.location?.name?.toLowerCase() || "";
+
     return (
-      ins.tablet?.qr_code?.toLowerCase().includes(s) ||
-      ins.tablet?.model?.toLowerCase().includes(s) ||
-      (ins.tablet?.location?.name && ins.tablet.location.name.toLowerCase().includes(s))
+      qrCode.includes(s) ||
+      model.includes(s) ||
+      brand.includes(s) ||
+      fullName.includes(s) ||
+      locationName.includes(s)
     );
   });
 
   return (
-    <div className="space-y-5">
-
+    <div className="space-y-5 animate-in fade-in pb-16">
       {/* Search & Filter Bar */}
       <SearchFilterBar
-        placeholder="Cari kode tablet, model, atau lokasi..."
+        placeholder="Cari kode tablet, nama tablet, atau lokasi area..."
         searchQuery={search}
         onSearchChange={setSearch}
         filterGroups={[
@@ -85,10 +102,15 @@ export default function PicInspectionsPage() {
             onChange: (val: string) => setStatusFilter(val),
           },
         ]}
+        onResetFilters={() => {
+          setSearch("");
+          setDebouncedSearch("");
+          setStatusFilter("all");
+        }}
       />
 
       {/* Inspections Table */}
-      <Card>
+      <Card className="overflow-hidden border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -108,6 +130,32 @@ export default function PicInspectionsPage() {
                     Memuat riwayat inspeksi...
                   </TableCell>
                 </TableRow>
+              ) : filteredList.length === 0 && debouncedSearch.trim() !== "" ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 px-4">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 dark:text-indigo-400">
+                        <SearchX className="w-10 h-10" />
+                      </div>
+                      <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">
+                        Tablet tidak ditemukan
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[260px]">
+                        Coba gunakan kode tablet, nama tablet, atau lokasi area yang berbeda.
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSearch("");
+                          setDebouncedSearch("");
+                        }}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl"
+                      >
+                        Reset Pencarian
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : filteredList.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-slate-500">
@@ -117,7 +165,7 @@ export default function PicInspectionsPage() {
               ) : (
                 filteredList.map((ins) => (
                   <TableRow key={ins.id}>
-                    <TableCell className="font-mono font-bold text-indigo-600">
+                    <TableCell className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
                       {ins.tablet?.qr_code || "QR-TAB-001"}
                     </TableCell>
                     <TableCell className="text-sm font-medium">
@@ -146,7 +194,7 @@ export default function PicInspectionsPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => setSelectedInspection(ins)}
-                        className="text-xs gap-1 text-indigo-600 hover:bg-indigo-50"
+                        className="text-xs gap-1 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 font-bold"
                       >
                         <Eye className="h-4 w-4" />
                         <span>Detail</span>

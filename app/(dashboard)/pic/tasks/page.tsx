@@ -9,6 +9,7 @@ import { User, Tablet, InspectionPeriod } from "@/types";
 import {
   ClipboardList,
   Search,
+  SearchX,
   QrCode,
   CheckCircle2,
   Clock,
@@ -98,7 +99,6 @@ function statusConfig(status: TaskStatus) {
 
 function StatusBadge({ status }: { status: TaskStatus }) {
   const cfg = statusConfig(status);
-  const Icon = cfg.icon;
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-transparent ${cfg.bg} ${cfg.text}`}
@@ -109,17 +109,32 @@ function StatusBadge({ status }: { status: TaskStatus }) {
   );
 }
 
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "qr_code", label: "Kode Tablet (A-Z)" },
+  { key: "latest", label: "Terbaru Diperiksa" },
+  { key: "oldest", label: "Terlama / Belum Diperiksa" },
+];
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PicTasksPage() {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sort, setSort] = useState<SortKey>("qr_code");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activePeriod, setActivePeriod] = useState<InspectionPeriod | null>(null);
+
+  // ─── Debounce Search (300ms) ──────────────────────────────────────────────
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   // ─── Load user + period ───────────────────────────────────────────────────
   useEffect(() => {
@@ -179,22 +194,30 @@ export default function PicTasksPage() {
     loadTasks();
   }, [loadTasks]);
 
-  // ─── Derived list ─────────────────────────────────────────────────────────
+  // ─── Derived list with 300ms debounced search filtering ─────────────────
   const filtered = tasks
     .filter((t) => {
-      // filter tab
+      // Filter tab
       if (filter === "belum_diperiksa") return t.status === "belum_diperiksa";
       if (filter === "menunggu_approval") return t.status === "menunggu_approval";
       if (filter === "selesai") return t.status === "disetujui";
       return true;
     })
     .filter((t) => {
-      if (!search) return true;
-      const s = search.toLowerCase();
+      if (!debouncedSearch.trim()) return true;
+      const s = debouncedSearch.toLowerCase().trim();
+      const qrCode = t.tablet.qr_code?.toLowerCase() || "";
+      const model = t.tablet.model?.toLowerCase() || "";
+      const brand = t.tablet.brand?.toLowerCase() || "";
+      const fullName = `${brand} ${model}`.toLowerCase();
+      const locationName = t.tablet.location?.name?.toLowerCase() || "";
+
       return (
-        t.tablet.qr_code?.toLowerCase().includes(s) ||
-        t.tablet.model?.toLowerCase().includes(s) ||
-        t.tablet.brand?.toLowerCase().includes(s)
+        qrCode.includes(s) ||
+        model.includes(s) ||
+        brand.includes(s) ||
+        fullName.includes(s) ||
+        locationName.includes(s)
       );
     })
     .sort((a, b) => {
@@ -221,62 +244,46 @@ export default function PicTasksPage() {
 
   const FILTER_TABS: { key: FilterKey; label: string; count: number }[] = [
     { key: "all", label: "Semua", count: total },
-    { key: "belum_diperiksa", label: "Belum Diperiksa", count: remaining },
-    { key: "menunggu_approval", label: "Menunggu Approval", count: pendingApproval },
+    { key: "belum_diperiksa", label: "Belum", count: remaining },
+    { key: "menunggu_approval", label: "Pending", count: pendingApproval },
     { key: "selesai", label: "Selesai", count: completed },
   ];
 
-  const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-    { key: "qr_code", label: "Kode Tablet (A-Z)" },
-    { key: "priority", label: "Prioritas" },
-    { key: "latest", label: "Terbaru" },
-    { key: "oldest", label: "Terlama" },
-  ];
-
-  // ─── Start Inspection ─────────────────────────────────────────────────────
-  const handleStartInspection = (qrCode: string) => {
-    router.push(`/pic/scan?qr=${encodeURIComponent(qrCode)}`);
-  };
-
   return (
-    <div className="space-y-4 animate-in fade-in pb-2">
-      {/* ── Page Header ── */}
-      <div className="space-y-0.5">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-          <h1 className="text-base font-black text-slate-900 dark:text-slate-100">
-            Tugas Inspeksi
+    <div className="space-y-4 pb-20 animate-in fade-in">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <span>Tugas Inspeksi</span>
           </h1>
-          <button
-            onClick={loadTasks}
-            disabled={loading}
-            className="ml-auto p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 active:scale-95 transition-all"
-            title="Muat ulang"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Daftar tablet lokasi yang wajib diperiksa periode ini.
+          </p>
         </div>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-          {activePeriod
-            ? `Periode: ${activePeriod.name} · ${currentUser?.location?.name || "Semua Lokasi"}`
-            : "Daftar tablet yang harus diperiksa pada periode aktif."}
-        </p>
+
+        <button
+          onClick={loadTasks}
+          disabled={loading}
+          className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition-colors"
+          title="Refresh Tugas"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+        </button>
       </div>
 
-      {/* ── Summary KPIs ── */}
-      <div className="grid grid-cols-4 gap-1.5">
+      {/* ── KPI Summary Micro Cards ── */}
+      <div className="grid grid-cols-4 gap-2">
         {[
-          { label: "Total", value: total, color: "text-slate-700 dark:text-slate-200", bg: "bg-slate-50 dark:bg-slate-800" },
-          { label: "Selesai", value: completed, color: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-50 dark:bg-emerald-950/40" },
+          { label: "Total", value: total, color: "text-slate-900 dark:text-slate-100", bg: "bg-slate-100 dark:bg-slate-800" },
           { label: "Belum", value: remaining, color: "text-amber-700 dark:text-amber-300", bg: "bg-amber-50 dark:bg-amber-950/40" },
           { label: "Pending", value: pendingApproval, color: "text-blue-700 dark:text-blue-300", bg: "bg-blue-50 dark:bg-blue-950/40" },
+          { label: "Selesai", value: completed, color: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-50 dark:bg-emerald-950/40" },
         ].map((kpi) => (
-          <div
-            key={kpi.label}
-            className={`${kpi.bg} rounded-xl p-2.5 text-center border border-slate-100 dark:border-slate-800`}
-          >
-            <span className={`text-lg font-black leading-none block ${kpi.color}`}>
-              {loading ? "·" : kpi.value}
+          <div key={kpi.label} className={`p-2.5 rounded-2xl ${kpi.bg} text-center border border-slate-200/50 dark:border-slate-800/50`}>
+            <span className={`text-base font-black leading-none block ${kpi.color}`}>
+              {loading ? "..." : kpi.value}
             </span>
             <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5 block">
               {kpi.label}
@@ -285,22 +292,23 @@ export default function PicTasksPage() {
         ))}
       </div>
 
-      {/* ── Search + Sort ── */}
+      {/* ── Search + Sort Bar ── */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Cari kode atau nama tablet..."
+            placeholder="Cari kode tablet, nama tablet, atau lokasi area..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-8 pr-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full h-10 pl-9 pr-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all"
           />
         </div>
         <div className="relative">
           <button
             onClick={() => setShowSortMenu((v) => !v)}
             className="h-10 w-10 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors active:scale-95"
+            title="Urutkan"
           >
             <ArrowUpDown className="w-4 h-4" />
           </button>
@@ -354,7 +362,7 @@ export default function PicTasksPage() {
         ))}
       </div>
 
-      {/* ── Content ── */}
+      {/* ── Content List / Empty States ── */}
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((n) => (
@@ -375,8 +383,30 @@ export default function PicTasksPage() {
             Semua tablet pada periode ini telah diperiksa. <strong>Great job!</strong> 🎉
           </p>
         </div>
+      ) : filtered.length === 0 && debouncedSearch.trim() !== "" ? (
+        /* ── Friendly Empty State: Search No Match ── */
+        <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-3 animate-in fade-in">
+          <div className="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-900/50">
+            <SearchX className="w-10 h-10" />
+          </div>
+          <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">
+            Tablet tidak ditemukan
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[260px] leading-relaxed">
+            Coba gunakan kode tablet, nama tablet, atau lokasi area yang berbeda.
+          </p>
+          <button
+            onClick={() => {
+              setSearch("");
+              setDebouncedSearch("");
+            }}
+            className="mt-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-500/20 transition-all"
+          >
+            Reset Pencarian
+          </button>
+        </div>
       ) : filtered.length === 0 ? (
-        /* ── Empty: No match ── */
+        /* ── Empty: No match according to tab filter ── */
         <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
           <SlidersHorizontal className="w-10 h-10 text-slate-300 dark:text-slate-600" />
           <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
@@ -384,7 +414,7 @@ export default function PicTasksPage() {
           </p>
         </div>
       ) : (
-        /* ── Task Cards ── */
+        /* ── Task Cards List ── */
         <div className="space-y-3">
           {filtered.map(({ tablet, status, inspection, lastInspectionDate, priority }) => {
             const cfg = statusConfig(status);
@@ -401,7 +431,7 @@ export default function PicTasksPage() {
                 }`}
               >
                 <div className="p-4 space-y-3">
-                  {/* ─ Header row ─ */}
+                  {/* Header Row */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-0.5">
                       <span className="font-mono font-black text-sm text-indigo-600 dark:text-indigo-400 block leading-none">
@@ -410,71 +440,56 @@ export default function PicTasksPage() {
                       <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
                         {tablet.brand} {tablet.model}
                       </span>
-                      <span className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-                        <MapPin className="w-3 h-3 text-indigo-400" />
-                        {tablet.location?.name || "—"}
-                      </span>
                     </div>
+                    <StatusBadge status={status} />
+                  </div>
 
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <StatusBadge status={status} />
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          priority === "High"
-                            ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"
-                            : priority === "Low"
-                            ? "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
-                            : "bg-sky-50 text-sky-600 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800"
-                        }`}
-                      >
-                        {priority}
-                      </span>
+                  {/* Details Row */}
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <MapPin className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                      <span className="truncate font-medium">{tablet.location?.name || "Gudang Utama"}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <QrCode className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                      <span className="truncate font-mono font-medium">{tablet.serial_number}</span>
                     </div>
                   </div>
 
-                  {/* ─ Last inspection date ─ */}
-                  {lastInspectionDate && (
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                      Terakhir diperiksa:{" "}
-                      {new Date(lastInspectionDate).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                  {/* Rejection Alert if inspection was rejected */}
+                  {status === "perlu_perbaikan" && inspection?.rejection_reason && (
+                    <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-[11px] text-rose-700 dark:text-rose-300 space-y-0.5">
+                      <span className="font-bold block">Alasan Penolakan Manager:</span>
+                      <p className="italic">"{inspection.rejection_reason}"</p>
+                    </div>
                   )}
 
-                  {/* ─ QR indicator row ─ */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500">
-                      <QrCode className="w-3 h-3" />
-                      QR tersedia
+                  {/* Action Row */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {lastInspectionDate
+                        ? `Terakhir: ${new Date(lastInspectionDate).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                          })}`
+                        : "Belum pernah diperiksa"}
                     </span>
 
-                    {canStart && (
+                    {canStart ? (
                       <button
-                        onClick={() => handleStartInspection(tablet.qr_code)}
-                        className="flex items-center gap-1.5 min-h-[40px] px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-black shadow-md shadow-indigo-500/25 transition-all"
+                        onClick={() => router.push(`/pic/scan?qr=${encodeURIComponent(tablet.qr_code)}`)}
+                        className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold text-xs shadow-sm flex items-center gap-1.5 transition-all"
                       >
                         <QrCode className="w-3.5 h-3.5" />
-                        Mulai Inspeksi
+                        <span>Mulai Inspeksi</span>
                       </button>
-                    )}
-
-                    {status === "menunggu_approval" && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <Hourglass className="w-3 h-3" />
-                        Menunggu
-                      </span>
-                    )}
-
-                    {status === "disetujui" && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Selesai
-                      </span>
+                    ) : (
+                      <button
+                        onClick={() => router.push(`/pic/inspections`)}
+                        className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 font-semibold text-xs transition-colors"
+                      >
+                        Lihat Status
+                      </button>
                     )}
                   </div>
                 </div>

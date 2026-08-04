@@ -22,9 +22,27 @@ export const tabletsService = {
         .is("deleted_at", null);
 
       if (search) {
-        query = query.or(
-          `qr_code.ilike.%${search}%,serial_number.ilike.%${search}%,brand.ilike.%${search}%,model.ilike.%${search}%`
-        );
+        // Query locations matching search term to support searching by location name
+        let matchedLocationIds: string[] = [];
+        try {
+          const { data: locs } = await supabase
+            .from("locations")
+            .select("id")
+            .ilike("name", `%${search}%`);
+          if (locs && locs.length > 0) {
+            matchedLocationIds = locs.map((l: any) => l.id);
+          }
+        } catch (e) {}
+
+        if (matchedLocationIds.length > 0) {
+          query = query.or(
+            `qr_code.ilike.%${search}%,serial_number.ilike.%${search}%,brand.ilike.%${search}%,model.ilike.%${search}%,location_id.in.(${matchedLocationIds.join(",")})`
+          );
+        } else {
+          query = query.or(
+            `qr_code.ilike.%${search}%,serial_number.ilike.%${search}%,brand.ilike.%${search}%,model.ilike.%${search}%`
+          );
+        }
       }
       if (status && status !== "all") {
         query = query.eq("status", status);
@@ -46,9 +64,26 @@ export const tabletsService = {
             .is("deleted_at", null);
 
           if (search) {
-            adminQuery = adminQuery.or(
-              `qr_code.ilike.%${search}%,serial_number.ilike.%${search}%,brand.ilike.%${search}%,model.ilike.%${search}%`
-            );
+            let adminMatchedLocationIds: string[] = [];
+            try {
+              const { data: locs } = await adminSupabase
+                .from("locations")
+                .select("id")
+                .ilike("name", `%${search}%`);
+              if (locs && locs.length > 0) {
+                adminMatchedLocationIds = locs.map((l: any) => l.id);
+              }
+            } catch (e) {}
+
+            if (adminMatchedLocationIds.length > 0) {
+              adminQuery = adminQuery.or(
+                `qr_code.ilike.%${search}%,serial_number.ilike.%${search}%,brand.ilike.%${search}%,model.ilike.%${search}%,location_id.in.(${adminMatchedLocationIds.join(",")})`
+              );
+            } else {
+              adminQuery = adminQuery.or(
+                `qr_code.ilike.%${search}%,serial_number.ilike.%${search}%,brand.ilike.%${search}%,model.ilike.%${search}%`
+              );
+            }
           }
           if (status && status !== "all") {
             adminQuery = adminQuery.eq("status", status);
