@@ -10,7 +10,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "TabMonitor — PT. Propan Raya ICC",
+  title: "TabMonitor",
   description:
     "Aplikasi Progressive Web App monitoring & inspeksi tablet bulanan menggunakan QR Code, role-based workflows, dan persetujuan Manager.",
   manifest: "/manifest.json",

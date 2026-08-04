@@ -391,4 +391,97 @@ export const inspectionsService = {
 
     throw new Error("Gagal memperbarui status approval inspeksi di Supabase.");
   },
+
+  async bulkReviewInspections(
+    ids: string[],
+    reviewerId: string,
+    status: "approved" | "rejected",
+    rejectionReason?: string
+  ): Promise<{ successCount: number; failedIds: string[]; errors: string[] }> {
+    if (!ids || ids.length === 0) {
+      return { successCount: 0, failedIds: [], errors: [] };
+    }
+
+    const updatedFields = {
+      status,
+      reviewer_id: reviewerId,
+      reviewed_at: new Date().toISOString(),
+      rejection_reason: status === "rejected" ? rejectionReason || "" : null,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      const supabase = createClient() as any;
+      const { data, error } = await supabase
+        .from("inspections")
+        .update(updatedFields)
+        .in("id", ids)
+        .select("id");
+
+      if (!error && data) {
+        // Record batch activity logs
+        try {
+          const activityLogs = ids.map((id) => ({
+            user_id: reviewerId,
+            action: status === "approved" ? "BULK_INSPECTION_APPROVED" : "BULK_INSPECTION_REJECTED",
+            details: {
+              inspection_id: id,
+              status,
+              rejection_reason: status === "rejected" ? rejectionReason || "" : null,
+              reviewed_at: updatedFields.reviewed_at,
+            },
+          }));
+          await supabase.from("activity_logs").insert(activityLogs);
+        } catch (logErr) {}
+
+        const updatedIds = data.map((d: any) => d.id);
+        const failed = ids.filter((id) => !updatedIds.includes(id));
+        return {
+          successCount: updatedIds.length,
+          failedIds: failed,
+          errors: failed.length > 0 ? [`${failed.length} inspeksi tidak ditemukan atau gagal diperbarui.`] : [],
+        };
+      }
+    } catch (e) {}
+
+    // Fallback: Try with Admin Client if client-side update had RLS or connection issue
+    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const adminSupabase = createAdminClient() as any;
+        const { data, error } = await adminSupabase
+          .from("inspections")
+          .update(updatedFields)
+          .in("id", ids)
+          .select("id");
+
+        if (!error && data) {
+          const updatedIds = data.map((d: any) => d.id);
+          const failed = ids.filter((id) => !updatedIds.includes(id));
+          return {
+            successCount: updatedIds.length,
+            failedIds: failed,
+            errors: failed.length > 0 ? [`${failed.length} inspeksi gagal diperbarui via admin client.`] : [],
+          };
+        }
+      } catch (e) {}
+    }
+
+    // Fallback item by item for detailed failure tracking
+    let successCount = 0;
+    const failedIds: string[] = [];
+    const errors: string[] = [];
+
+    for (const id of ids) {
+      try {
+        await this.reviewInspection(id, reviewerId, status, rejectionReason);
+        successCount++;
+      } catch (err: any) {
+        failedIds.push(id);
+        errors.push(err.message || `Gagal memproses inspeksi ID: ${id}`);
+      }
+    }
+
+    return { successCount, failedIds, errors };
+  },
 };
+

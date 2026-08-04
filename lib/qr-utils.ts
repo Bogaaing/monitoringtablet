@@ -15,7 +15,7 @@ export async function downloadQrCanvas(elementId: string, filename: string = "ta
       scale: 3,
       useCORS: true,
       backgroundColor: "#FFFFFF",
-    });
+    } as any);
     const image = canvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = image;

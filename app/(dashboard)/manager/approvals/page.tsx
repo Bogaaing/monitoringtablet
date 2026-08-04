@@ -6,19 +6,18 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { SearchFilterBar } from "@/components/shared/search-filter-bar";
 import { StatGradientCard } from "@/components/dashboard/stat-gradient-card";
 import { GlassCard } from "@/components/dashboard/glass-card";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { BulkActionBar } from "@/components/shared/bulk-action-bar";
 import { inspectionsService, Inspection } from "@/services/inspections.service";
 import { locationsService } from "@/services/locations.service";
-import { Location } from "@/types";
+import { authService } from "@/services/auth.service";
+import { Location, User } from "@/types";
 import {
   Clock,
   CheckCircle2,
   XCircle,
   Activity,
-  QrCode,
   MapPin,
   Eye,
   X,
@@ -26,30 +25,62 @@ import {
   BatteryCharging,
   Maximize2,
   ShieldCheck,
-  UserCheck,
   Send,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 
 export default function ManagerApprovalsPage() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Bulk Selection state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showBulkConfirmModal, setShowBulkConfirmModal] = useState<"approve" | "reject" | null>(null);
+  const [bulkRejectionReason, setBulkRejectionReason] = useState("");
+
+  // Toast notification state
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [locationFilter, setLocationFilter] = useState("all");
 
-  // Selected Inspection for Detail Modal
+  // Selected Inspection for Detail Modal (Single review)
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
-  
-  // Rejection Dialog State
+
+  // Rejection Dialog State (Single review)
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
   // Lightbox Image Preview State
   const [activePhotoUrl, setActivePhotoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initUser = async () => {
+      try {
+        const user = await authService.getCurrentProfile();
+        setCurrentUser(user);
+      } catch (e) {}
+    };
+    initUser();
+  }, []);
+
+  // Determine if user has Manager role permissions (Strict scoping)
+  const isManager =
+    currentUser?.role === "manager" ||
+    (typeof document !== "undefined" && document.cookie.includes("demo_role=manager"));
+
+  const showToast = (text: string, type: "success" | "error" | "info" = "success") => {
+    setToastMessage({ text, type });
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
 
   const fetchApprovalData = async () => {
     setLoading(true);
@@ -86,7 +117,7 @@ export default function ManagerApprovalsPage() {
 
     // Location filter
     if (locationFilter !== "all" && ins.tablet?.location_id !== locationFilter) return false;
-    
+
     // Search query
     if (!search) return true;
     const s = search.toLowerCase();
@@ -98,23 +129,49 @@ export default function ManagerApprovalsPage() {
     );
   });
 
+  // Selection helpers (Only for pending status)
+  const selectablePendingItems = filteredList.filter((ins) => ins.status === "pending");
+  const isAllPendingSelected =
+    selectablePendingItems.length > 0 &&
+    selectablePendingItems.every((ins) => selectedIds.includes(ins.id));
+
+  const toggleSelectAll = () => {
+    if (isAllPendingSelected) {
+      const pendingIds = new Set(selectablePendingItems.map((ins) => ins.id));
+      setSelectedIds((prev) => prev.filter((id) => !pendingIds.has(id)));
+    } else {
+      const pendingIds = selectablePendingItems.map((ins) => ins.id);
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pendingIds])));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+  };
+
+  // Single Approval Action
   const handleApprove = async (inspectionId: string) => {
     setActionLoading(true);
     try {
-      await inspectionsService.reviewInspection(
-        inspectionId,
-        "30000000-0000-0000-0000-000000000003", // Manager ID
-        "approved"
-      );
+      const reviewerId = currentUser?.id || "30000000-0000-0000-0000-000000000003";
+      await inspectionsService.reviewInspection(inspectionId, reviewerId, "approved");
       setSelectedInspection(null);
+      showToast("Inspeksi telah berhasil disetujui.", "success");
       fetchApprovalData();
     } catch (e) {
-      alert("Gagal menyetujui inspeksi.");
+      showToast("Gagal menyetujui inspeksi.", "error");
     } finally {
       setActionLoading(false);
     }
   };
 
+  // Single Rejection Action
   const handleRejectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedInspection || !rejectionReason.trim()) {
@@ -124,25 +181,119 @@ export default function ManagerApprovalsPage() {
 
     setActionLoading(true);
     try {
+      const reviewerId = currentUser?.id || "30000000-0000-0000-0000-000000000003";
       await inspectionsService.reviewInspection(
         selectedInspection.id,
-        "30000000-0000-0000-0000-000000000003", // Manager ID
+        reviewerId,
         "rejected",
         rejectionReason.trim()
       );
       setShowRejectModal(false);
       setRejectionReason("");
       setSelectedInspection(null);
+      showToast("Inspeksi telah ditolak.", "info");
       fetchApprovalData();
     } catch (e) {
-      alert("Gagal menolak inspeksi.");
+      showToast("Gagal menolak inspeksi.", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Bulk Approval Action Execution
+  const handleExecuteBulkApprove = async () => {
+    if (selectedIds.length === 0) return;
+    setActionLoading(true);
+    try {
+      const reviewerId = currentUser?.id || "30000000-0000-0000-0000-000000000003";
+      const count = selectedIds.length;
+      const res = await inspectionsService.bulkReviewInspections(
+        selectedIds,
+        reviewerId,
+        "approved"
+      );
+
+      setShowBulkConfirmModal(null);
+
+      if (res.failedIds.length === 0) {
+        showToast(`${count} ${count === 1 ? "inspection" : "inspections"} approved successfully.`, "success");
+        setSelectedIds([]);
+      } else {
+        showToast(`${res.successCount} Approved, ${res.failedIds.length} Failed`, "error");
+        setSelectedIds(res.failedIds); // Keep failed IDs selected for retry
+      }
+
+      await fetchApprovalData();
+    } catch (e: any) {
+      showToast("Gagal memproses bulk approval.", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Bulk Rejection Action Execution
+  const handleExecuteBulkReject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedIds.length === 0) return;
+    if (!bulkRejectionReason.trim()) {
+      alert("Wajib mengisi alasan penolakan.");
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const reviewerId = currentUser?.id || "30000000-0000-0000-0000-000000000003";
+      const count = selectedIds.length;
+      const res = await inspectionsService.bulkReviewInspections(
+        selectedIds,
+        reviewerId,
+        "rejected",
+        bulkRejectionReason.trim()
+      );
+
+      setShowBulkConfirmModal(null);
+      setBulkRejectionReason("");
+
+      if (res.failedIds.length === 0) {
+        showToast(`${count} ${count === 1 ? "inspection" : "inspections"} rejected successfully.`, "info");
+        setSelectedIds([]);
+      } else {
+        showToast(`${res.successCount} Rejected, ${res.failedIds.length} Failed`, "error");
+        setSelectedIds(res.failedIds); // Keep failed IDs selected for retry
+      }
+
+      await fetchApprovalData();
+    } catch (e: any) {
+      showToast("Gagal memproses bulk rejection.", "error");
     } finally {
       setActionLoading(false);
     }
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative pb-20">
+      {/* Toast Notification Container */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div
+            className={`px-4.5 py-3 rounded-2xl shadow-xl border flex items-center gap-3 text-xs font-bold ${
+              toastMessage.type === "success"
+                ? "bg-slate-900/95 text-emerald-400 border-emerald-500/40 shadow-emerald-950/20"
+                : toastMessage.type === "error"
+                ? "bg-slate-900/95 text-rose-400 border-rose-500/40 shadow-rose-950/20"
+                : "bg-slate-900/95 text-sky-400 border-sky-500/40 shadow-sky-950/20"
+            }`}
+          >
+            {toastMessage.type === "success" ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0" />
+            )}
+            <span>{toastMessage.text}</span>
+          </div>
+        </div>
+      )}
+
       <PageHeader
         title="Antrean Approval Inspeksi"
         description="Verifikasi kelayakan hasil pengujian tablet yang dikirimkan oleh Kepala Regu (PIC)."
@@ -215,10 +366,22 @@ export default function ManagerApprovalsPage() {
       />
 
       {/* Queue Table */}
-      <GlassCard className="p-0" glowColor="indigo">
+      <GlassCard className="p-0 overflow-hidden" glowColor="indigo">
         <Table>
           <TableHeader>
             <TableRow>
+              {isManager && (
+                <TableHead className="w-12 text-center">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all pending inspections"
+                    checked={isAllPendingSelected}
+                    onChange={toggleSelectAll}
+                    disabled={selectablePendingItems.length === 0}
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  />
+                </TableHead>
+              )}
               <TableHead>Kode Tablet</TableHead>
               <TableHead>Pengirim (PIC)</TableHead>
               <TableHead>Lokasi Area</TableHead>
@@ -231,63 +394,205 @@ export default function ManagerApprovalsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={isManager ? 8 : 7} className="text-center py-8 text-slate-500">
                   Memuat antrean persetujuan...
                 </TableCell>
               </TableRow>
             ) : filteredList.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={isManager ? 8 : 7} className="text-center py-8 text-slate-500">
                   Tidak ada antrean inspeksi yang cocok dengan filter.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredList.map((ins) => (
-                <TableRow key={ins.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                  <TableCell className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                    {ins.tablet?.qr_code || "QR-TAB-001"}
-                  </TableCell>
-                  <TableCell className="text-sm font-semibold">
-                    {ins.pic?.name || "Ahmad Rizky (PIC)"}
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-600 dark:text-slate-400">
-                    <span className="inline-flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-indigo-500" />
-                      <span>{ins.tablet?.location?.name || "Gudang Utama A"}</span>
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-xs uppercase font-bold text-slate-700 dark:text-slate-300">
-                    {ins.tablet_condition || "good"}
-                  </TableCell>
-                  <TableCell className="text-xs font-mono text-slate-500">
-                    {new Date(ins.submitted_at).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={ins.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      onClick={() => setSelectedInspection(ins)}
-                      className="text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      <span>Review & Approval</span>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              filteredList.map((ins) => {
+                const isSelected = selectedIds.includes(ins.id);
+                const isPending = ins.status === "pending";
+
+                return (
+                  <TableRow
+                    key={ins.id}
+                    className={`transition-colors ${
+                      isSelected
+                        ? "bg-indigo-50/80 dark:bg-indigo-950/40"
+                        : "hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
+                    }`}
+                  >
+                    {isManager && (
+                      <TableCell className="text-center">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select inspection ${ins.tablet?.qr_code}`}
+                          checked={isSelected}
+                          onChange={() => toggleSelectOne(ins.id)}
+                          disabled={!isPending}
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition disabled:opacity-20 disabled:cursor-not-allowed"
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                      {ins.tablet?.qr_code || "QR-TAB-001"}
+                    </TableCell>
+                    <TableCell className="text-sm font-semibold">
+                      {ins.pic?.name || "Ahmad Rizky (PIC)"}
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                      <span className="inline-flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-indigo-500" />
+                        <span>{ins.tablet?.location?.name || "Gudang Utama A"}</span>
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs uppercase font-bold text-slate-700 dark:text-slate-300">
+                      {ins.tablet_condition || "good"}
+                    </TableCell>
+                    <TableCell className="text-xs font-mono text-slate-500">
+                      {new Date(ins.submitted_at).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={ins.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        onClick={() => setSelectedInspection(ins)}
+                        className="text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>Review & Approval</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </GlassCard>
 
-      {/* Inspection Review Detail Modal */}
+      {/* Sticky Bulk Action Bar for Manager Role */}
+      {isManager && (
+        <BulkActionBar
+          selectedCount={selectedIds.length}
+          onApproveSelected={() => setShowBulkConfirmModal("approve")}
+          onRejectSelected={() => setShowBulkConfirmModal("reject")}
+          onClearSelection={handleClearSelection}
+          isLoading={actionLoading}
+        />
+      )}
+
+      {/* Bulk Approve Confirmation Modal */}
+      {showBulkConfirmModal === "approve" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h4 className="text-base font-bold text-emerald-600 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5" />
+                <span>Konfirmasi Bulk Approval</span>
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShowBulkConfirmModal(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+              Approve <strong className="text-indigo-600 font-bold">{selectedIds.length}</strong> selected {selectedIds.length === 1 ? "inspection" : "inspections"}?
+            </p>
+            <p className="text-xs text-slate-500">
+              Seluruh inspeksi yang dipilih akan langsung diverifikasi dan statusnya diubah menjadi Approved.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowBulkConfirmModal(null)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleExecuteBulkApprove}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>{actionLoading ? "Memproses..." : "Approve"}</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Reject Confirmation Modal */}
+      {showBulkConfirmModal === "reject" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in zoom-in-95">
+          <form
+            onSubmit={handleExecuteBulkReject}
+            className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h4 className="text-base font-bold text-rose-600 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                <span>Konfirmasi Bulk Rejection</span>
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShowBulkConfirmModal(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+              Reject <strong className="text-rose-600 font-bold">{selectedIds.length}</strong> selected {selectedIds.length === 1 ? "inspection" : "inspections"}?
+            </p>
+            <p className="text-xs text-slate-500">
+              Masukkan alasan penolakan yang akan berlaku untuk seluruh pengajuan inspeksi yang dipilih.
+            </p>
+
+            <textarea
+              rows={3}
+              value={bulkRejectionReason}
+              onChange={(e) => setBulkRejectionReason(e.target.value)}
+              placeholder="Contoh: Foto dokumentasi fisik tablet kurang jelas, harap inspeksi ulang..."
+              required
+              className="w-full p-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500"
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowBulkConfirmModal(null)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={actionLoading}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-2 text-xs"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>{actionLoading ? "Memproses..." : "Reject"}</span>
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Single Inspection Review Detail Modal */}
       {selectedInspection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full p-6 space-y-6 relative max-h-[90vh] overflow-y-auto">
@@ -413,7 +718,7 @@ export default function ManagerApprovalsPage() {
               </div>
             </div>
 
-            {/* Manager Action Buttons */}
+            {/* Single Manager Action Buttons */}
             {selectedInspection.status === "pending" && (
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <Button
@@ -441,7 +746,7 @@ export default function ManagerApprovalsPage() {
         </div>
       )}
 
-      {/* Rejection Reason Modal */}
+      {/* Single Rejection Reason Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in zoom-in-95">
           <form
