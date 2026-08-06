@@ -17,11 +17,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/splash-screen.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml" },
       { url: "/icons/tabmonitor-icon.svg", type: "image/svg+xml" },
       { url: "/favicon.ico" },
     ],
-    shortcut: "/splash-screen.svg",
+    shortcut: "/icon.svg",
     apple: "/icons/tabmonitor-icon.svg",
   },
   appleWebApp: {
@@ -51,7 +51,7 @@ export default function RootLayout({
   return (
     <html lang="id" className={`h-full ${jakarta.variable}`}>
       <head>
-        <link rel="icon" href="/splash-screen.svg" type="image/svg+xml" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="alternate icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/tabmonitor-icon.svg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
