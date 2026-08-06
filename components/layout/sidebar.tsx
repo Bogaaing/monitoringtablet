@@ -113,33 +113,39 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
       {/* Mobile Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden transition-opacity"
           onClick={onClose}
         />
       )}
 
-      {/* Sidebar Container: Soft Dark Navy (#1F2544), Width 280px (or 80px collapsed), 1px right border (rgba(255,255,255,0.08)), soft shadow */}
+      {/* Sidebar Container: Pure White (#FFFFFF), 1px border (#EEF2F7), Soft Shadow (0 0 24px rgba(15,23,42,0.04)) */}
       <aside
         className={cn(
-          "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-[#1F2544] text-white transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-white/[0.08] shadow-[0_0_30px_rgba(15,23,42,0.08)]",
+          "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-white text-[#111827] transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-[#EEF2F7] shadow-[0_0_24px_rgba(15,23,42,0.04)]",
           isCollapsed ? "w-[80px]" : "w-[280px]",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Brand Header Logo Area */}
-        <div className={cn("flex items-center justify-between border-b border-white/[0.08] transition-all duration-300", isCollapsed ? "p-4 h-[88px] justify-center" : "px-6 py-6 h-[88px]")}>
+        {/* Logo Area (32px padding spacing, 56px icon) */}
+        <div
+          className={cn(
+            "flex items-center justify-between border-b border-[#EEF2F7] transition-all duration-300",
+            isCollapsed ? "p-4 h-[96px] justify-center" : "px-6 py-8 h-[96px]"
+          )}
+        >
           <Link href="/dashboard" className="flex items-center gap-3.5 group overflow-hidden">
-            {/* 56px Logo Icon Container */}
-            <div className="flex h-[56px] w-[56px] items-center justify-center rounded-[18px] bg-gradient-to-tr from-[#4F46E5] to-[#6D5DFE] text-white shadow-lg shadow-indigo-600/25 shrink-0 transition-transform duration-200 group-hover:scale-105">
+            {/* 56px Logo Icon */}
+            <div className="flex h-[56px] w-[56px] items-center justify-center rounded-[18px] bg-gradient-to-tr from-[#4F46E5] to-[#6D5DFE] text-white shadow-md shadow-indigo-600/20 shrink-0 transition-transform duration-200 group-hover:scale-105">
               <TabletIcon className="h-7 w-7 stroke-[2]" />
             </div>
 
             {!isCollapsed && (
               <div className="flex flex-col justify-center">
-                <span className="font-bold text-[20px] tracking-tight text-white leading-tight block">
-                  TabMonitor
+                <span className="font-bold text-[20px] tracking-tight leading-tight block">
+                  <span className="text-[#111827]">Tab</span>
+                  <span className="text-[#4F46E5]">Monitor</span>
                 </span>
-                <span className="text-[12px] uppercase font-bold tracking-[1.5px] text-white/65 block mt-0.5">
+                <span className="text-[12px] uppercase font-bold tracking-[1px] text-[#94A3B8] block mt-0.5">
                   MONTHLY INSPECTION
                 </span>
               </div>
@@ -149,7 +155,7 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
           {!isCollapsed && (
             <button
               onClick={onClose}
-              className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-xl hover:bg-white/[0.06] transition-colors"
+              className="lg:hidden text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
               aria-label="Close Sidebar"
             >
               <X className="h-5 w-5" />
@@ -157,20 +163,8 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
           )}
         </div>
 
-        {/* Minimal Role Section Card */}
-        {!isCollapsed && (
-          <div className="px-5 py-4 border-b border-white/[0.08]">
-            <div className="flex items-center justify-between bg-white/[0.04] border border-white/[0.08] rounded-[14px] p-4 transition-all hover:bg-white/[0.06]">
-              <span className="text-xs font-medium text-white/60">Role Pengguna</span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#4F46E5]/20 text-[#A5B4FC] border border-[#4F46E5]/40 shadow-sm">
-                {userRole}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Menu Navigation */}
-        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2.5">
+        {/* Navigation Menu Area (28px top padding, 10px item gap) */}
+        <nav className="flex-1 overflow-y-auto px-4 py-7 space-y-[10px]">
           {filteredMenu.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -185,8 +179,8 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
                 className={cn(
                   "relative flex items-center gap-3.5 rounded-[14px] px-4 py-3 h-[52px] text-[15px] font-medium transition-all duration-200 group cursor-pointer select-none",
                   isActive
-                    ? "bg-[#EEF2FF] text-[#4F46E5] font-semibold shadow-sm"
-                    : "text-[#E5E7EB] hover:bg-white/[0.06] hover:text-white"
+                    ? "bg-[#EEF2FF] text-[#4F46E5] font-semibold"
+                    : "text-[#475569] hover:bg-[#F8FAFC] hover:text-[#4F46E5]"
                 )}
               >
                 {/* 4px Primary Purple Active Left Indicator */}
@@ -199,7 +193,7 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
                     "w-[22px] h-[22px] shrink-0 transition-colors duration-200",
                     isActive
                       ? "text-[#4F46E5]"
-                      : "text-[#A5B4FC] group-hover:text-white"
+                      : "text-[#64748B] group-hover:text-[#4F46E5]"
                   )}
                 />
 
@@ -211,27 +205,26 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
           })}
         </nav>
 
-        {/* Bottom Section: Sembunyikan Sidebar / Collapse Toggle */}
-        <div className="p-4 border-t border-white/[0.08]">
+        {/* Bottom Area (24px padding): Ghost Collapse Sidebar Button */}
+        <div className="p-6 border-t border-[#EEF2F7]">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={cn(
-              "w-full flex items-center gap-3 rounded-[14px] p-2.5 transition-all duration-200 hover:bg-white/[0.06] cursor-pointer group",
+              "w-full flex items-center gap-3 rounded-[14px] p-3 bg-transparent hover:bg-[#F8FAFC] transition-all duration-200 cursor-pointer group",
               isCollapsed ? "justify-center" : "justify-start"
             )}
             title={isCollapsed ? "Buka Sidebar" : "Sembunyikan Sidebar"}
           >
-            {/* Circular button container with rgba(255,255,255,0.06) background */}
-            <div className="w-9 h-9 rounded-full bg-white/[0.06] group-hover:bg-white/[0.12] flex items-center justify-center text-white/80 group-hover:text-white shrink-0 transition-colors shadow-sm">
+            <div className="flex items-center justify-center shrink-0">
               {isCollapsed ? (
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-5 h-5 text-[#64748B] group-hover:text-[#4F46E5] transition-colors" />
               ) : (
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-5 h-5 text-[#64748B] group-hover:text-[#4F46E5] transition-colors" />
               )}
             </div>
 
             {!isCollapsed && (
-              <span className="text-xs text-white/60 font-medium group-hover:text-white/90 transition-colors">
+              <span className="text-[13px] font-medium text-[#64748B] group-hover:text-[#4F46E5] transition-colors">
                 Sembunyikan Sidebar
               </span>
             )}
