@@ -10,7 +10,7 @@ interface PropanLogoProps {
 export function PropanLogo({
   className = "h-9 w-auto",
   height,
-  color = "#2E2A7B",
+  color = "#4F46E5",
   showWordmark = true,
 }: PropanLogoProps) {
   const style = height
@@ -18,51 +18,31 @@ export function PropanLogo({
     : undefined;
 
   return (
-    <svg
-      viewBox="0 0 200 230"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      style={style}
-    >
-      <g fill={color}>
-        {/* Top Circle */}
-        <circle cx="100" cy="50" r="42" fill={color} />
-        <circle cx="100" cy="50" r="15" fill="#FFFFFF" />
-        <line x1="100" y1="65" x2="100" y2="92" stroke="#FFFFFF" strokeWidth="5.5" />
-        <line x1="89" y1="59" x2="65" y2="79" stroke="#FFFFFF" strokeWidth="5.5" />
-        <line x1="111" y1="59" x2="135" y2="79" stroke="#FFFFFF" strokeWidth="5.5" />
-
-        {/* Bottom-Left Circle */}
-        <circle cx="52" cy="132" r="42" fill={color} />
-        <circle cx="52" cy="132" r="15" fill="#FFFFFF" />
-        <line x1="52" y1="117" x2="52" y2="90" stroke="#FFFFFF" strokeWidth="5.5" />
-        <line x1="63" y1="139" x2="87" y2="155" stroke="#FFFFFF" strokeWidth="5.5" />
-        <line x1="63" y1="125" x2="88" y2="110" stroke="#FFFFFF" strokeWidth="5.5" />
-
-        {/* Bottom-Right Circle */}
-        <circle cx="148" cy="132" r="42" fill={color} />
-        <circle cx="148" cy="132" r="15" fill="#FFFFFF" />
-        <line x1="148" y1="117" x2="148" y2="90" stroke="#FFFFFF" strokeWidth="5.5" />
-        <line x1="137" y1="139" x2="113" y2="155" stroke="#FFFFFF" strokeWidth="5.5" />
-        <line x1="137" y1="125" x2="112" y2="110" stroke="#FFFFFF" strokeWidth="5.5" />
-
-        {/* Wordmark "propan" */}
-        {showWordmark && (
-          <text
-            x="100"
-            y="222"
-            textAnchor="middle"
-            fontFamily="'Inter', 'Montserrat', 'Helvetica Neue', Arial, sans-serif"
-            fontWeight="900"
-            fontSize="36"
-            letterSpacing="-1px"
-            fill={color}
-          >
-            propan
-          </text>
-        )}
-      </g>
-    </svg>
+    <div className={`inline-flex items-center gap-2 ${className}`} style={style}>
+      <svg
+        viewBox="0 0 512 512"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-full w-auto aspect-square shrink-0"
+      >
+        <defs>
+          <linearGradient id="tabMonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4F46E5" />
+            <stop offset="100%" stopColor="#6D5DFE" />
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="128" fill="url(#tabMonGrad)" />
+        <g transform="translate(144, 136) scale(9.5)" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+          <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2.5" />
+        </g>
+      </svg>
+      {showWordmark && (
+        <span className="font-extrabold tracking-tight leading-none text-base">
+          <span className="text-slate-800">Tab</span>
+          <span className="text-[#4F46E5]">Monitor</span>
+        </span>
+      )}
+    </div>
   );
 }
