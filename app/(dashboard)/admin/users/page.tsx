@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { usersService } from "@/services/users.service";
 import { locationsService } from "@/services/locations.service";
 import { User, Location, Role } from "@/types";
-import { Users as UsersIcon, UserPlus, Edit2, Trash2, X, Shield, Mail } from "lucide-react";
+import { Users as UsersIcon, UserPlus, Edit2, Trash2, X, AlertTriangle, FileSpreadsheet, Lock, CheckCircle } from "lucide-react";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -30,14 +30,23 @@ export default function AdminUsersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
+    npk: "",
     name: "",
-    email: "",
     role: "pic" as Role,
+    department: "",
+    status: "active",
     location_id: "",
     phone: "",
+    password: "",
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Import Modal State
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
 
   // Delete state
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
@@ -60,7 +69,7 @@ export default function AdminUsersPage() {
         role: roleFilter,
         locationId: locationFilter,
         page: currentPage,
-        limit: 5,
+        limit: 10,
       });
       setUsers(res.data);
       setTotalPages(res.totalPages);
@@ -83,11 +92,14 @@ export default function AdminUsersPage() {
   const handleOpenCreate = () => {
     setEditingUser(null);
     setFormData({
+      npk: "",
       name: "",
-      email: "",
       role: "pic",
+      department: "Inspection",
+      status: "active",
       location_id: "",
       phone: "",
+      password: "pic123",
     });
     setFormError(null);
     setIsFormOpen(true);
@@ -96,11 +108,14 @@ export default function AdminUsersPage() {
   const handleOpenEdit = (u: User) => {
     setEditingUser(u);
     setFormData({
+      npk: u.npk || "",
       name: u.name,
-      email: u.email,
       role: u.role,
+      department: u.department || "Operations",
+      status: u.status || "active",
       location_id: u.location_id || "",
       phone: u.phone || "",
+      password: "",
     });
     setFormError(null);
     setIsFormOpen(true);
@@ -108,8 +123,20 @@ export default function AdminUsersPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim()) {
-      setFormError("Nama dan Email wajib diisi.");
+
+    const cleanNpk = formData.npk.trim();
+    if (!cleanNpk) {
+      setFormError("NPK wajib diisi.");
+      return;
+    }
+
+    if (!/^\d{8}$/.test(cleanNpk)) {
+      setFormError("NPK harus berupa 8 digit angka.");
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      setFormError("Nama Lengkap wajib diisi.");
       return;
     }
 
@@ -118,9 +145,25 @@ export default function AdminUsersPage() {
 
     try {
       if (editingUser) {
-        await usersService.updateUser(editingUser.id, formData);
+        await usersService.updateUser(editingUser.id, {
+          npk: cleanNpk,
+          name: formData.name,
+          role: formData.role,
+          department: formData.department,
+          status: formData.status,
+          location_id: formData.location_id,
+          phone: formData.phone,
+        });
       } else {
-        await usersService.createUser(formData);
+        await usersService.createUser({
+          npk: cleanNpk,
+          name: formData.name,
+          role: formData.role,
+          department: formData.department,
+          location_id: formData.location_id,
+          phone: formData.phone,
+          password: formData.password || undefined,
+        });
       }
       setIsFormOpen(false);
       fetchUsers();
@@ -129,6 +172,52 @@ export default function AdminUsersPage() {
     } finally {
       setFormLoading(false);
     }
+  };
+
+  // Excel / Bulk Import Handler
+  const handleBulkImport = async () => {
+    if (!importText.trim()) {
+      setImportResult("Silakan tempelkan data CSV/Excel.");
+      return;
+    }
+
+    setImportLoading(true);
+    setImportResult(null);
+
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
+
+    const lines = importText.trim().split("\n");
+    for (const line of lines) {
+      const parts = line.split(/[,;\t]/).map((p) => p.trim());
+      if (parts.length >= 2) {
+        const [rawNpk, rawName, rawRole, rawDept, rawPass] = parts;
+        const npk = rawNpk.replace(/\D/g, "");
+        if (/^\d{8}$/.test(npk)) {
+          try {
+            await usersService.createUser({
+              npk,
+              name: rawName || `Karyawan ${npk}`,
+              role: (rawRole?.toLowerCase() as Role) || "pic",
+              department: rawDept || "Operations",
+              password: rawPass || "propan123",
+            });
+            successCount++;
+          } catch (e: any) {
+            failCount++;
+            errors.push(`NPK ${npk}: ${e.message}`);
+          }
+        } else {
+          failCount++;
+          errors.push(`Format NPK ${rawNpk} tidak valid (harus 8 digit).`);
+        }
+      }
+    }
+
+    setImportLoading(false);
+    setImportResult(`Berhasil: ${successCount} user. Gagal: ${failCount} user. ${errors.slice(0, 3).join(" | ")}`);
+    fetchUsers();
   };
 
   const handleDeleteConfirm = async () => {
@@ -148,9 +237,9 @@ export default function AdminUsersPage() {
   const renderRoleBadge = (role: Role) => {
     switch (role) {
       case "admin":
-        return <Badge variant="destructive">Admin</Badge>;
+        return <Badge className="bg-purple-100 text-purple-700 border border-purple-200">Admin</Badge>;
       case "manager":
-        return <Badge variant="default">Manager</Badge>;
+        return <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200">Manager</Badge>;
       case "pic":
       default:
         return <Badge variant="secondary">PIC (Kepala Regu)</Badge>;
@@ -160,13 +249,30 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Kelola Pengguna Sistem"
-        description="Master data akun pengguna, peran akses (Admin, PIC, Manager), dan lokasi penugasan."
+        title="Kelola Pengguna Sistem (NPK Based)"
+        description="Master data akun pengguna berdasarkan 8 Digit NPK Karyawan, Peran Akses (Admin, Manager, PIC), dan Departemen."
       >
-        <Button onClick={handleOpenCreate} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-          <UserPlus className="h-4 w-4" />
-          <span>Tambah User Baru</span>
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Import Excel / CSV Button */}
+          <Button
+            variant="outline"
+            onClick={() => {
+              setImportText("");
+              setImportResult(null);
+              setIsImportOpen(true);
+            }}
+            className="gap-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            <span>Import Excel</span>
+          </Button>
+
+          {/* Add User Button */}
+          <Button onClick={handleOpenCreate} className="gap-2 bg-[#4F46E5] hover:bg-indigo-700">
+            <UserPlus className="h-4 w-4" />
+            <span>Tambah User Baru</span>
+          </Button>
+        </div>
       </PageHeader>
 
       {/* Search & Filter Bar */}
@@ -176,7 +282,7 @@ export default function AdminUsersPage() {
           setSearchQuery(val);
           setCurrentPage(1);
         }}
-        placeholder="Cari nama atau email pengguna..."
+        placeholder="Cari berdasarkan NPK (8 digit), Nama, Peran, atau Departemen..."
         filterGroups={[
           {
             key: "role",
@@ -211,53 +317,78 @@ export default function AdminUsersPage() {
         }}
       />
 
-      {/* Data Table */}
-      <Card>
+      {/* Data Table with NPK Primary Column */}
+      <Card className="border border-[#ECEEF5] shadow-sm rounded-2xl overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Nama Pengguna</TableHead>
-                <TableHead>Alamat Email</TableHead>
-                <TableHead>Peran (Role)</TableHead>
-                <TableHead>Lokasi Penugasan</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+              <TableRow className="bg-slate-50/70">
+                <TableHead className="font-semibold text-slate-700">NPK</TableHead>
+                <TableHead className="font-semibold text-slate-700">Nama Pengguna</TableHead>
+                <TableHead className="font-semibold text-slate-700">Peran (Role)</TableHead>
+                <TableHead className="font-semibold text-slate-700">Departemen</TableHead>
+                <TableHead className="font-semibold text-slate-700">Status</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                     Memuat data pengguna...
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                     Tidak ada data pengguna yang ditemukan.
                   </TableCell>
                 </TableRow>
               ) : (
                 users.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-semibold">{u.name}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400 text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5 text-slate-400" />
-                        <span>{u.email}</span>
-                      </div>
+                  <TableRow key={u.id} className="hover:bg-slate-50/60 transition-colors">
+                    {/* NPK Column with Migration Warning Badge if missing */}
+                    <TableCell className="font-mono font-bold text-sm">
+                      {u.npk ? (
+                        <span className="text-[#4F46E5] bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
+                          {u.npk}
+                        </span>
+                      ) : (
+                        <Badge className="bg-amber-50 text-amber-800 border-amber-300 font-semibold gap-1">
+                          <AlertTriangle className="w-3 h-3 text-amber-600" />
+                          <span>NPK Belum Diisi</span>
+                        </Badge>
+                      )}
                     </TableCell>
+
+                    {/* Name Column */}
+                    <TableCell className="font-semibold text-slate-900">{u.name}</TableCell>
+
+                    {/* Role Column */}
                     <TableCell>{renderRoleBadge(u.role)}</TableCell>
-                    <TableCell className="text-sm text-slate-700 dark:text-slate-300">
-                      {u.location?.name || "Seluruh Area"}
+
+                    {/* Department Column */}
+                    <TableCell className="text-sm text-slate-600 dark:text-slate-400">
+                      {u.department || "Operations"}
                     </TableCell>
+
+                    {/* Status Column */}
+                    <TableCell>
+                      {u.status === "inactive" ? (
+                        <Badge variant="secondary" className="text-slate-500">Nonaktif</Badge>
+                      ) : (
+                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">Aktif</Badge>
+                      )}
+                    </TableCell>
+
+                    {/* Action Column */}
                     <TableCell className="text-right space-x-1">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleOpenEdit(u)}
                         className="text-slate-600 hover:text-indigo-600"
-                        title="Edit"
+                        title="Edit NPK / Data User"
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -266,7 +397,7 @@ export default function AdminUsersPage() {
                         size="sm"
                         onClick={() => setDeletingUser(u)}
                         className="text-slate-600 hover:text-rose-600"
-                        title="Hapus"
+                        title="Hapus Pengguna"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -282,14 +413,14 @@ export default function AdminUsersPage() {
               currentPage={currentPage}
               totalPages={totalPages}
               totalRecords={totalRecords}
-              pageSize={5}
+              pageSize={10}
               onPageChange={(p) => setCurrentPage(p)}
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Form Modal Dialog */}
+      {/* Add / Edit Form Modal Dialog */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-6 space-y-4 relative max-h-[90vh] overflow-y-auto">
@@ -301,21 +432,45 @@ export default function AdminUsersPage() {
             </button>
 
             <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+              <div className="p-2.5 rounded-xl bg-indigo-50 text-[#4F46E5] dark:bg-indigo-950">
                 <UsersIcon className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold">
-                {editingUser ? "Edit Data Pengguna" : "Tambah Pengguna Baru"}
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                {editingUser ? "Edit / Tetapkan NPK Pengguna" : "Tambah User Baru (NPK Based)"}
               </h3>
             </div>
 
             <form onSubmit={handleSave} className="space-y-4 pt-2">
               {formError && (
-                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-sm">
+                <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
                   {formError}
                 </div>
               )}
 
+              {/* NPK Field (8 digits required) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  NPK Karyawan (8 Digit) <span className="text-rose-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={8}
+                  placeholder="Contoh: 11130595"
+                  value={formData.npk}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 8);
+                    setFormData({ ...formData, npk: val });
+                  }}
+                  required
+                  className="font-mono font-bold tracking-widest text-[#4F46E5]"
+                />
+                <p className="text-[11px] text-slate-400">
+                  Harus 8 digit angka unik. Pengguna akan login menggunakan NPK ini.
+                </p>
+              </div>
+
+              {/* Name Field */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Nama Lengkap <span className="text-rose-500">*</span>
@@ -328,19 +483,7 @@ export default function AdminUsersPage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Alamat Email <span className="text-rose-500">*</span>
-                </label>
-                <Input
-                  type="email"
-                  placeholder="contoh@company.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                />
-              </div>
-
+              {/* Role & Department Row */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -359,39 +502,65 @@ export default function AdminUsersPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    No. Telepon / WA
+                    Departemen
                   </label>
                   <Input
-                    placeholder="0812xxxx"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Contoh: Operations"
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Lokasi Penugasan Utama
-                </label>
-                <select
-                  value={formData.location_id}
-                  onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
-                  className="w-full h-10 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">-- Seluruh Area (Global Access) --</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.code} - {loc.name}
-                    </option>
-                  ))}
-                </select>
+              {/* Password Field (for New User) or Status Field (for Edit User) */}
+              {!editingUser ? (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Kata Sandi (Password Initial)
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type="password"
+                      placeholder="Minimal 6 karakter"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    />
+                    <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Status Akun
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full h-10 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="active">Aktif (Dapat Login)</option>
+                    <option value="inactive">Nonaktif (Akses Diblokir)</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Read-Only Internal Auth Email Helper */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs space-y-1">
+                <span className="font-semibold text-slate-700 block">Email Otentikasi Internal (Read-Only):</span>
+                <span className="font-mono text-slate-900 block font-semibold">
+                  {editingUser?.email || (formData.npk ? `${formData.npk}@tabmonitor.my.id` : "<NPK>@tabmonitor.my.id")}
+                </span>
+                <span className="text-[11px] text-slate-400 block">
+                  * Digunakan hanya untuk Supabase Auth internal dan tidak ditampilkan ke pengguna.
+                </span>
               </div>
 
+              {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={formLoading}>
                   Batal
                 </Button>
-                <Button type="submit" disabled={formLoading} className="bg-indigo-600 hover:bg-indigo-700">
+                <Button type="submit" disabled={formLoading} className="bg-[#4F46E5] hover:bg-indigo-700">
                   {formLoading ? "Memproses..." : editingUser ? "Simpan Perubahan" : "Tambah User"}
                 </Button>
               </div>
@@ -400,11 +569,66 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {/* Bulk Import Excel Modal Dialog */}
+      {isImportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-6 space-y-4 relative">
+            <button
+              onClick={() => setIsImportOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
+                <FileSpreadsheet className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Import Batch User dari Excel / CSV</h3>
+                <p className="text-xs text-slate-500">Format: NPK, Nama, Role, Departemen, Password</p>
+              </div>
+            </div>
+
+            {importResult && (
+              <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-semibold">
+                {importResult}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-700">
+                Tempelkan Baris CSV / Format Teks:
+              </label>
+              <textarea
+                rows={6}
+                placeholder={`11130595, Super Admin, admin, IT, admin123\n22240696, Manager Ops, manager, Operations, manager123\n33350797, PIC Penguji, pic, Inspection, pic123`}
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                className="w-full p-3 font-mono text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+              <p className="text-[11px] text-slate-400">
+                Sistem akan membuat email internal otomatis <strong>&lt;NPK&gt;@tabmonitor.my.id</strong> untuk tiap user.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <Button variant="outline" onClick={() => setIsImportOpen(false)} disabled={importLoading}>
+                Tutup
+              </Button>
+              <Button onClick={handleBulkImport} disabled={importLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                {importLoading ? "Mengimpor..." : "Proses Import Batch"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       <ConfirmDeleteDialog
         isOpen={!!deletingUser}
         title={`Hapus Pengguna "${deletingUser?.name}"?`}
-        description="Data pengguna ini akan dihapus secara lunak (soft delete). Akun tidak dapat login kembali, namun riwayat aktivitas & transaksi inspeksi lama tetap tersimpan secara permanen."
+        description="Data pengguna ini akan dihapus secara lunak (soft delete). Akun tidak dapat login kembali menggunakan NPK ini."
         loading={deleteLoading}
         onConfirm={handleDeleteConfirm}
         onClose={() => setDeletingUser(null)}

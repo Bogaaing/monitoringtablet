@@ -62,8 +62,8 @@ export default function PicProfilePage() {
             </span>
           </div>
 
-          <p className="text-xs text-slate-500 font-mono">
-            {currentUser?.email || "pic@monitoring.com"}
+          <p className="text-xs text-[#4F46E5] font-mono font-bold">
+            NPK: {currentUser?.npk || "33350797"}
           </p>
         </CardContent>
       </Card>
@@ -88,11 +88,11 @@ export default function PicProfilePage() {
 
             <div className="flex items-center justify-between py-1 border-b border-slate-100 dark:border-slate-800">
               <span className="text-slate-500 flex items-center gap-2">
-                <Mail className="w-4 h-4 text-indigo-500" />
-                <span>Email Resmi</span>
+                <UserIcon className="w-4 h-4 text-indigo-500" />
+                <span>NPK Karyawan</span>
               </span>
-              <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                {currentUser?.email || "pic@monitoring.com"}
+              <span className="font-mono font-bold text-[#4F46E5]">
+                {currentUser?.npk || "33350797"}
               </span>
             </div>
 

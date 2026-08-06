@@ -2,13 +2,35 @@ import { createClient } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { User, PaginationParams, PaginatedResult, Role } from "@/types";
 
+export interface CreateUserPayload {
+  npk: string;
+  name: string;
+  role: Role;
+  department?: string | null;
+  password?: string;
+  location_id?: string | null;
+  phone?: string;
+}
+
+export interface UpdateUserPayload {
+  npk?: string;
+  name?: string;
+  email?: string;
+  role?: Role;
+  department?: string | null;
+  status?: string;
+  location_id?: string | null;
+  phone?: string;
+}
+
 export const usersService = {
-  async getUsers(params?: PaginationParams): Promise<PaginatedResult<User>> {
+  async getUsers(params?: PaginationParams & { npk?: string; department?: string }): Promise<PaginatedResult<User>> {
     const page = params?.page || 1;
     const limit = params?.limit || 10;
-    const search = params?.search?.toLowerCase() || "";
+    const search = params?.search?.trim().toLowerCase() || "";
     const role = params?.role;
     const locationId = params?.locationId;
+    const npkExact = params?.npk?.trim();
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -20,9 +42,12 @@ export const usersService = {
         .select("*, location:locations(*)", { count: "exact" })
         .is("deleted_at", null);
 
-      if (search) {
-        query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+      if (npkExact) {
+        query = query.eq("npk", npkExact);
+      } else if (search) {
+        query = query.or(`npk.ilike.%${search}%,name.ilike.%${search}%,department.ilike.%${search}%,email.ilike.%${search}%`);
       }
+
       if (role && role !== "all") {
         query = query.eq("role", role);
       }
@@ -43,9 +68,12 @@ export const usersService = {
             .select("*, location:locations(*)", { count: "exact" })
             .is("deleted_at", null);
 
-          if (search) {
-            adminQuery = adminQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+          if (npkExact) {
+            adminQuery = adminQuery.eq("npk", npkExact);
+          } else if (search) {
+            adminQuery = adminQuery.or(`npk.ilike.%${search}%,name.ilike.%${search}%,department.ilike.%${search}%,email.ilike.%${search}%`);
           }
+
           if (role && role !== "all") {
             adminQuery = adminQuery.eq("role", role);
           }
@@ -83,22 +111,41 @@ export const usersService = {
     };
   },
 
-  async createUser(payload: {
-    name: string;
-    email: string;
-    role: Role;
-    location_id?: string | null;
-    phone?: string;
-  }): Promise<User> {
-    const cleanEmail = payload.email.trim().toLowerCase();
+  async createUser(payload: CreateUserPayload): Promise<User> {
+    const cleanNpk = (payload.npk || "").trim();
+
+    // Validate NPK: numeric and exactly 8 digits
+    if (!/^\d{8}$/.test(cleanNpk)) {
+      throw new Error("NPK harus terdiri dari tepat 8 digit angka.");
+    }
+
+    // Automatically generate internal auth email: <NPK>@tabmonitor.my.id
+    const generatedEmail = `${cleanNpk}@tabmonitor.my.id`;
     let cleanLocationId =
       payload.location_id && payload.location_id.trim() !== "" ? payload.location_id.trim() : null;
     let authId: string | null = null;
 
+    const supabase = createClient() as any;
+
+    // Check NPK uniqueness in public.users table
+    try {
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("npk", cleanNpk)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (existingUser) {
+        throw new Error(`NPK '${cleanNpk}' sudah terdaftar di sistem.`);
+      }
+    } catch (e: any) {
+      if (e.message && e.message.includes("terdaftar")) throw e;
+    }
+
     // Verify cleanLocationId is valid in Supabase DB
     if (cleanLocationId) {
       try {
-        const supabase = createClient() as any;
         const { data: loc } = await supabase.from("locations").select("id").eq("id", cleanLocationId).single();
         if (!loc) cleanLocationId = null;
       } catch (e) {
@@ -110,15 +157,17 @@ export const usersService = {
     if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
         const adminSupabase = createAdminClient();
-        const defaultPassword = payload.role === "admin" ? "admin123" : payload.role === "pic" ? "pic123" : "manager123";
+        const userPassword = payload.password || (payload.role === "admin" ? "admin123" : payload.role === "pic" ? "pic123" : "manager123");
 
         const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
-          email: cleanEmail,
-          password: defaultPassword,
+          email: generatedEmail,
+          password: userPassword,
           email_confirm: true,
           user_metadata: {
+            npk: cleanNpk,
             name: payload.name,
             role: payload.role,
+            department: payload.department || null,
           },
         });
 
@@ -132,16 +181,18 @@ export const usersService = {
 
     // 2. Insert into Supabase public.users
     const insertPayload = {
+      npk: cleanNpk,
       name: payload.name.trim(),
-      email: cleanEmail,
+      email: generatedEmail,
       role: payload.role,
+      department: payload.department ? payload.department.trim() : null,
+      status: "active",
       location_id: cleanLocationId,
       phone: payload.phone ? payload.phone.trim() : null,
       ...(authId ? { auth_id: authId } : {}),
     };
 
     try {
-      const supabase = createClient() as any;
       const { data, error } = await supabase
         .from("users")
         .insert([insertPayload])
@@ -155,7 +206,7 @@ export const usersService = {
       if (error) {
         console.error("createUser Supabase error:", error);
         if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
-          throw new Error(`Email '${cleanEmail}' sudah terdaftar di sistem. Silakan gunakan alamat email lain.`);
+          throw new Error(`NPK '${cleanNpk}' sudah terdaftar di sistem. Silakan gunakan NPK lain.`);
         }
         if (error.code === "23503" || error.message?.includes("foreign key")) {
           const fallbackPayload = { ...insertPayload, location_id: null };
@@ -177,29 +228,50 @@ export const usersService = {
     throw new Error("Gagal menambahkan pengguna ke database Supabase.");
   },
 
-  async updateUser(
-    id: string,
-    payload: {
-      name?: string;
-      email?: string;
-      role?: Role;
-      location_id?: string | null;
-      phone?: string;
-    }
-  ): Promise<User> {
+  async updateUser(id: string, payload: UpdateUserPayload): Promise<User> {
     const updateData: any = {
       ...payload,
       updated_at: new Date().toISOString(),
     };
 
+    const supabase = createClient() as any;
+
+    if (payload.npk !== undefined) {
+      const cleanNpk = (payload.npk || "").trim();
+      if (cleanNpk && !/^\d{8}$/.test(cleanNpk)) {
+        throw new Error("NPK harus berupa 8 digit angka.");
+      }
+      updateData.npk = cleanNpk || null;
+
+      // Check uniqueness against other active users
+      if (cleanNpk) {
+        try {
+          const { data: existingUser } = await supabase
+            .from("users")
+            .select("id")
+            .eq("npk", cleanNpk)
+            .neq("id", id)
+            .is("deleted_at", null)
+            .maybeSingle();
+
+          if (existingUser) {
+            throw new Error(`NPK '${cleanNpk}' sudah digunakan oleh pengguna lain.`);
+          }
+        } catch (e: any) {
+          if (e.message && e.message.includes("digunakan")) throw e;
+        }
+      }
+    }
+
     if (payload.email) updateData.email = payload.email.trim().toLowerCase();
     if (payload.name) updateData.name = payload.name.trim();
+    if (payload.department !== undefined) updateData.department = payload.department ? payload.department.trim() : null;
+    if (payload.status) updateData.status = payload.status;
     if (payload.location_id !== undefined) {
       updateData.location_id = payload.location_id && payload.location_id.trim() !== "" ? payload.location_id.trim() : null;
     }
 
     try {
-      const supabase = createClient() as any;
       const { data, error } = await supabase
         .from("users")
         .update(updateData)
@@ -211,12 +283,12 @@ export const usersService = {
 
       if (error) {
         if (error.code === "23505" || error.message?.includes("unique")) {
-          throw new Error(`Email '${updateData.email}' sudah terdaftar oleh pengguna lain.`);
+          throw new Error(`NPK atau Email sudah terdaftar oleh pengguna lain.`);
         }
         throw new Error(error.message || "Gagal memperbarui pengguna di Supabase.");
       }
     } catch (e: any) {
-      if (e.message && (e.message.includes("terdaftar") || e.message.includes("Gagal"))) throw e;
+      if (e.message && (e.message.includes("digunakan") || e.message.includes("NPK") || e.message.includes("Gagal"))) throw e;
     }
 
     throw new Error("Gagal memperbarui pengguna di Supabase.");

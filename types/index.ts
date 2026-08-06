@@ -20,9 +20,12 @@ export interface Location {
 export interface User {
   id: string;
   auth_id?: string;
+  npk?: string | null;
   name: string;
   email: string;
   role: Role;
+  department?: string | null;
+  status?: "active" | "inactive" | string;
   phone?: string | null;
   location_id?: string | null;
   location?: Location | null;

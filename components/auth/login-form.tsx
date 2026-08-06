@@ -1,16 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { authService } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight } from "lucide-react";
+import { User, Lock, Eye, EyeOff, AlertCircle, Loader2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export function LoginForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [npk, setNpk] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -20,8 +18,14 @@ export function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email.trim() || !password) {
-      setErrorMsg("Alamat email dan kata sandi wajib diisi.");
+    const cleanNpk = npk.trim();
+    if (!cleanNpk || !password) {
+      setErrorMsg("NPK dan kata sandi wajib diisi.");
+      return;
+    }
+
+    if (!/^\d{8}$/.test(cleanNpk)) {
+      setErrorMsg("NPK harus terdiri dari tepat 8 digit angka.");
       return;
     }
 
@@ -29,10 +33,10 @@ export function LoginForm() {
     setErrorMsg(null);
 
     try {
-      const result = await authService.signIn(email, password);
+      const result = await authService.signIn(cleanNpk, password);
 
       if (result.error) {
-        setErrorMsg(typeof result.error === "string" && result.error !== "{}" ? result.error : "Email atau kata sandi tidak sesuai.");
+        setErrorMsg(result.error);
       } else if (result.redirectUrl) {
         window.location.href = result.redirectUrl;
       }
@@ -53,24 +57,30 @@ export function LoginForm() {
         </div>
       )}
 
-      {/* Email Field */}
+      {/* NPK Field (8-digit numeric input) */}
       <div>
-        <label htmlFor="email" className="block text-xs font-semibold text-slate-700 mb-2">
-          Email
+        <label htmlFor="npk" className="block text-xs font-semibold text-slate-700 mb-2">
+          NPK (Nomor Pokok Karyawan)
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-            <Mail className="w-4 h-4" />
+            <User className="w-4 h-4" />
           </div>
           <Input
-            id="email"
-            type="email"
+            id="npk"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={8}
             required
-            placeholder="name@company.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Masukkan NPK (8 digit)"
+            value={npk}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, "").slice(0, 8);
+              setNpk(val);
+            }}
             disabled={loading}
-            className="w-full pl-10 pr-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent transition-all duration-200 h-[52px]"
+            className="w-full pl-10 pr-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-mono tracking-wider text-slate-900 placeholder:text-slate-400 placeholder:font-sans focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-transparent transition-all duration-200 h-[52px]"
           />
         </div>
       </div>
@@ -123,7 +133,7 @@ export function LoginForm() {
         </Link>
       </div>
 
-      {/* Submit Button (18px spacing from Remember Me row) */}
+      {/* Submit Button */}
       <Button
         type="submit"
         disabled={loading}
@@ -132,51 +142,51 @@ export function LoginForm() {
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Authenticating...</span>
+            <span>Memverifikasi NPK...</span>
           </>
         ) : (
           <>
-            <span>Sign In</span>
+            <span>Masuk Sistem</span>
             <ArrowRight className="w-4 h-4" />
           </>
         )}
       </Button>
 
-      {/* Quick Autofill Options for Testing (18px spacing from Sign In button) */}
+      {/* Demo Account Autofill Options */}
       <div className="pt-[18px] border-t border-slate-100 text-center space-y-1.5">
         <span className="text-[11px] font-semibold text-slate-400 block">
-          Pilih Akun Demo untuk Pengujian Cepat:
+          Pilih Akun NPK Demo untuk Pengujian Cepat:
         </span>
         <div className="flex flex-wrap justify-center gap-1.5">
           <button
             type="button"
             onClick={() => {
-              setEmail("admin@monitoring.com");
+              setNpk("11130595");
               setPassword("admin123");
             }}
             className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
           >
-            Admin
+            Admin (11130595)
           </button>
           <button
             type="button"
             onClick={() => {
-              setEmail("pic@monitoring.com");
+              setNpk("33350797");
               setPassword("pic123");
             }}
             className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
           >
-            PIC (Kepala Regu)
+            PIC (33350797)
           </button>
           <button
             type="button"
             onClick={() => {
-              setEmail("manager@monitoring.com");
+              setNpk("22240696");
               setPassword("manager123");
             }}
             className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
           >
-            Manager
+            Manager (22240696)
           </button>
         </div>
       </div>

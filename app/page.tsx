@@ -7,8 +7,18 @@ import { Role } from "@/types";
 
 export default async function RootPage() {
   const cookieStore = await cookies();
+  const userNpk = cookieStore.get("user_npk")?.value;
   const rawEmail = cookieStore.get("user_email")?.value;
   const userEmail = rawEmail ? decodeURIComponent(rawEmail).trim().toLowerCase() : null;
+
+  if (userNpk) {
+    try {
+      const res = await usersService.getUsers({ npk: userNpk, limit: 1 });
+      if (res.data && res.data.length > 0) {
+        redirect(authService.getRoleDashboard(res.data[0].role));
+      }
+    } catch (e) {}
+  }
 
   if (userEmail) {
     try {
