@@ -115,17 +115,17 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Sidebar Container (280px) */}
       <aside
         className={cn(
-          "fixed top-0 bottom-0 left-0 z-50 flex w-72 flex-col bg-slate-900 text-slate-100 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-slate-800",
+          "fixed top-0 bottom-0 left-0 z-50 flex w-[280px] flex-col bg-slate-900 text-slate-100 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-slate-800",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Brand Header */}
         <div className="flex h-16 items-center justify-between px-6 border-b border-slate-800">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-indigo-600/30">
               <TabletIcon className="h-5 w-5" />
             </div>
             <div>
@@ -168,16 +168,19 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-150",
+                  "relative flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group",
                   isActive
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20 font-semibold"
-                    : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"
+                    ? "bg-[#4F46E5] text-white shadow-md shadow-indigo-600/30 font-semibold"
+                    : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 hover:translate-x-0.5"
                 )}
               >
+                {isActive && (
+                  <span className="absolute left-0 top-2 bottom-2 w-1 bg-white rounded-r-full shadow-sm" />
+                )}
                 <Icon
                   className={cn(
-                    "h-5 w-5 transition-colors",
-                    isActive ? "text-white" : "text-slate-400"
+                    "h-5 w-5 transition-transform duration-200 group-hover:scale-110",
+                    isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200"
                   )}
                 />
                 <span>{item.title}</span>

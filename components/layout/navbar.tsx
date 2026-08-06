@@ -28,7 +28,7 @@ export function Navbar({
         );
       case "manager":
         return (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 tracking-wider">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800 tracking-wider">
             MANAGER
           </span>
         );
@@ -43,19 +43,19 @@ export function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 px-4 md:px-8 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex h-[54px] w-full items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 px-4 md:px-8 backdrop-blur-md">
       {/* Left: Mobile Toggle & Active Period */}
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuToggle}
-          className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg lg:hidden"
+          className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg lg:hidden"
           aria-label="Toggle Navigation"
         >
-          <Menu className="h-6 w-6" />
+          <Menu className="h-5 w-5" />
         </button>
 
         {/* Active Inspection Period Banner */}
-        <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">
           <Calendar className="h-3.5 w-3.5" />
           <span>
             Periode Aktif:{" "}
@@ -68,18 +68,22 @@ export function Navbar({
       <div className="flex items-center gap-4">
         {/* User Profile Info Card */}
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-sm border border-indigo-200 dark:border-indigo-800 shrink-0 shadow-sm">
-            {user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon className="h-4 w-4" />}
+          <div className="relative">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#4F46E5] text-white font-bold text-xs shadow-sm">
+              {user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon className="h-4 w-4" />}
+            </div>
+            {/* Green Online Indicator */}
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 shadow-sm" />
           </div>
 
           <div className="hidden md:flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-none">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-none">
                 {user?.name || "Pengguna"}
               </span>
               {renderRoleBadge(user?.role)}
             </div>
-            <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
               {user?.email || "user@monitoring.com"}
             </span>
           </div>
