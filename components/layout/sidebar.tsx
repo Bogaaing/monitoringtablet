@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Role } from "@/types";
@@ -18,6 +18,8 @@ import {
   FileSpreadsheet,
   X,
   TabletIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -102,6 +104,7 @@ const menuItems: NavMenuItem[] = [
 
 export function Sidebar({ userRole = "admin", isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const filteredMenu = menuItems.filter((item) => item.roles.includes(userRole));
 
@@ -115,48 +118,59 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
         />
       )}
 
-      {/* Sidebar Container (280px) */}
+      {/* Sidebar Container: Soft Dark Navy (#1F2544), Width 280px (or 80px collapsed), 1px right border (rgba(255,255,255,0.08)), soft shadow */}
       <aside
         className={cn(
-          "fixed top-0 bottom-0 left-0 z-50 flex w-[280px] flex-col bg-slate-900 text-slate-100 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-slate-800",
+          "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-[#1F2544] text-white transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-white/[0.08] shadow-[0_0_30px_rgba(15,23,42,0.08)]",
+          isCollapsed ? "w-[80px]" : "w-[280px]",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Brand Header */}
-        <div className="flex h-16 items-center justify-between px-6 border-b border-slate-800">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-indigo-600/30">
-              <TabletIcon className="h-5 w-5" />
+        {/* Brand Header Logo Area */}
+        <div className={cn("flex items-center justify-between border-b border-white/[0.08] transition-all duration-300", isCollapsed ? "p-4 h-[88px] justify-center" : "px-6 py-6 h-[88px]")}>
+          <Link href="/dashboard" className="flex items-center gap-3.5 group overflow-hidden">
+            {/* 56px Logo Icon Container */}
+            <div className="flex h-[56px] w-[56px] items-center justify-center rounded-[18px] bg-gradient-to-tr from-[#4F46E5] to-[#6D5DFE] text-white shadow-lg shadow-indigo-600/25 shrink-0 transition-transform duration-200 group-hover:scale-105">
+              <TabletIcon className="h-7 w-7 stroke-[2]" />
             </div>
-            <div>
-              <span className="font-bold text-base tracking-tight text-white block">
-                TabMonitor
-              </span>
-              <span className="text-[10px] uppercase font-semibold tracking-wider text-indigo-400">
-                Monthly Inspection
-              </span>
-            </div>
+
+            {!isCollapsed && (
+              <div className="flex flex-col justify-center">
+                <span className="font-bold text-[20px] tracking-tight text-white leading-tight block">
+                  TabMonitor
+                </span>
+                <span className="text-[12px] uppercase font-bold tracking-[1.5px] text-white/65 block mt-0.5">
+                  MONTHLY INSPECTION
+                </span>
+              </div>
+            )}
           </Link>
-          <button
-            onClick={onClose}
-            className="lg:hidden text-slate-400 hover:text-white p-1 rounded-lg"
-          >
-            <X className="h-5 w-5" />
-          </button>
+
+          {!isCollapsed && (
+            <button
+              onClick={onClose}
+              className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-xl hover:bg-white/[0.06] transition-colors"
+              aria-label="Close Sidebar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
-        {/* User Role Tag */}
-        <div className="px-6 py-4 border-b border-slate-800/80 bg-slate-950/40">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-medium">Aktif Sebagai</span>
-            <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              {userRole}
-            </span>
+        {/* Minimal Role Section Card */}
+        {!isCollapsed && (
+          <div className="px-5 py-4 border-b border-white/[0.08]">
+            <div className="flex items-center justify-between bg-white/[0.04] border border-white/[0.08] rounded-[14px] p-4 transition-all hover:bg-white/[0.06]">
+              <span className="text-xs font-medium text-white/60">Role Pengguna</span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#4F46E5]/20 text-[#A5B4FC] border border-[#4F46E5]/40 shadow-sm">
+                {userRole}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Menu Navigation */}
-        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5">
+        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2.5">
           {filteredMenu.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -167,33 +181,61 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
+                title={isCollapsed ? item.title : undefined}
                 className={cn(
-                  "relative flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group",
+                  "relative flex items-center gap-3.5 rounded-[14px] px-4 py-3 h-[52px] text-[15px] font-medium transition-all duration-200 group cursor-pointer select-none",
                   isActive
-                    ? "bg-[#4F46E5] text-white shadow-md shadow-indigo-600/30 font-semibold"
-                    : "text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 hover:translate-x-0.5"
+                    ? "bg-[#EEF2FF] text-[#4F46E5] font-semibold shadow-sm"
+                    : "text-[#E5E7EB] hover:bg-white/[0.06] hover:text-white"
                 )}
               >
+                {/* 4px Primary Purple Active Left Indicator */}
                 {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-1 bg-white rounded-r-full shadow-sm" />
+                  <span className="absolute left-0 top-2.5 bottom-2.5 w-[4px] bg-[#4F46E5] rounded-full shadow-sm" />
                 )}
+
                 <Icon
                   className={cn(
-                    "h-5 w-5 transition-transform duration-200 group-hover:scale-110",
-                    isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200"
+                    "w-[22px] h-[22px] shrink-0 transition-colors duration-200",
+                    isActive
+                      ? "text-[#4F46E5]"
+                      : "text-[#A5B4FC] group-hover:text-white"
                   )}
                 />
-                <span>{item.title}</span>
+
+                {!isCollapsed && (
+                  <span className="truncate">{item.title}</span>
+                )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Footer info */}
-        <div className="p-4 border-t border-slate-800 text-center">
-          <p className="text-xs text-slate-500">
-            Tablet Monitoring System v1.0
-          </p>
+        {/* Bottom Section: Sembunyikan Sidebar / Collapse Toggle */}
+        <div className="p-4 border-t border-white/[0.08]">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={cn(
+              "w-full flex items-center gap-3 rounded-[14px] p-2.5 transition-all duration-200 hover:bg-white/[0.06] cursor-pointer group",
+              isCollapsed ? "justify-center" : "justify-start"
+            )}
+            title={isCollapsed ? "Buka Sidebar" : "Sembunyikan Sidebar"}
+          >
+            {/* Circular button container with rgba(255,255,255,0.06) background */}
+            <div className="w-9 h-9 rounded-full bg-white/[0.06] group-hover:bg-white/[0.12] flex items-center justify-center text-white/80 group-hover:text-white shrink-0 transition-colors shadow-sm">
+              {isCollapsed ? (
+                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <ChevronLeft className="w-5 h-5" />
+              )}
+            </div>
+
+            {!isCollapsed && (
+              <span className="text-xs text-white/60 font-medium group-hover:text-white/90 transition-colors">
+                Sembunyikan Sidebar
+              </span>
+            )}
+          </button>
         </div>
       </aside>
     </>
