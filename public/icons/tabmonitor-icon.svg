@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="appIconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#6D5DFE" />
+    </linearGradient>
+    <filter id="iconGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#4F46E5" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Solid White Background for Maskable Icon Padding -->
+  <rect width="512" height="512" fill="#FFFFFF" />
+
+  <!-- Main Squircle App Icon -->
+  <rect x="64" y="64" width="384" height="384" rx="96" ry="96" fill="url(#appIconGrad)" filter="url(#iconGlow)" />
+
+  <!-- White Tablet Glyph Centered -->
+  <g transform="translate(144, 136) scale(9.5)" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+    <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2.5" />
+  </g>
+</svg>

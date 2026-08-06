@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { SplashScreen } from "@/components/ui/splash-screen";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -12,29 +13,30 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "TabMonitor",
   description:
-    "Aplikasi Progressive Web App monitoring & inspeksi tablet bulanan menggunakan QR Code, role-based workflows, dan persetujuan Manager.",
+    "Aplikasi Progressive Web App monitoring & inspeksi tablet bulanan menggunakan QR Code.",
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/propan-logo.svg", type: "image/svg+xml" },
+      { url: "/splash-screen.svg", type: "image/svg+xml" },
+      { url: "/icons/tabmonitor-icon.svg", type: "image/svg+xml" },
       { url: "/favicon.ico" },
     ],
-    shortcut: "/propan-logo.svg",
-    apple: "/icons/apple-touch-icon.png",
+    shortcut: "/splash-screen.svg",
+    apple: "/icons/tabmonitor-icon.svg",
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "TabMonitor",
   },
   other: {
     "mobile-web-app-capable": "yes",
-    "msapplication-TileColor": "#2E2A7B",
+    "msapplication-TileColor": "#4F46E5",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2E2A7B",
+  themeColor: "#FFFFFF",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -49,13 +51,13 @@ export default function RootLayout({
   return (
     <html lang="id" className={`h-full ${jakarta.variable}`}>
       <head>
-        <link rel="icon" href="/propan-logo.svg" type="image/svg+xml" />
+        <link rel="icon" href="/splash-screen.svg" type="image/svg+xml" />
         <link rel="alternate icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/tabmonitor-icon.svg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="TabMonitor" />
-        <meta name="theme-color" content="#473bf0" />
+        <meta name="theme-color" content="#FFFFFF" />
         {/* Register Service Worker & capture beforeinstallprompt BEFORE React hydrates */}
         <script
           dangerouslySetInnerHTML={{
@@ -78,6 +80,7 @@ export default function RootLayout({
       <body
         className={`${jakarta.className} h-full bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white`}
       >
+        <SplashScreen />
         {children}
       </body>
     </html>
