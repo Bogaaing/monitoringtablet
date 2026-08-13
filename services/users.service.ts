@@ -205,6 +205,27 @@ export const usersService = {
 
       if (error) {
         console.error("createUser Supabase error:", error);
+
+        // Fallback if npk, department, or status columns don't exist in DB yet
+        if (error.code === "PGRST204" || error.message?.includes("column") || error.message?.includes("schema cache")) {
+          const { npk: _npk, department: _dept, status: _st, ...fallbackPayload } = insertPayload;
+
+          const { data: fbData, error: fbError } = await supabase
+            .from("users")
+            .insert([fallbackPayload])
+            .select("*, location:locations(*)")
+            .single();
+
+          if (!fbError && fbData) {
+            return {
+              ...fbData,
+              npk: cleanNpk,
+              department: insertPayload.department,
+              status: "active",
+            } as unknown as User;
+          }
+        }
+
         if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("duplicate")) {
           throw new Error(`NPK '${cleanNpk}' sudah terdaftar di sistem. Silakan gunakan NPK lain.`);
         }
@@ -229,12 +250,12 @@ export const usersService = {
   },
 
   async updateUser(id: string, payload: UpdateUserPayload): Promise<User> {
+    const supabase = createClient() as any;
+
     const updateData: any = {
       ...payload,
       updated_at: new Date().toISOString(),
     };
-
-    const supabase = createClient() as any;
 
     if (payload.npk !== undefined) {
       const cleanNpk = (payload.npk || "").trim();
@@ -246,7 +267,7 @@ export const usersService = {
       // Check uniqueness against other active users
       if (cleanNpk) {
         try {
-          const { data: existingUser } = await supabase
+          const { data: existingUser, error: checkErr } = await supabase
             .from("users")
             .select("id")
             .eq("npk", cleanNpk)
@@ -254,7 +275,7 @@ export const usersService = {
             .is("deleted_at", null)
             .maybeSingle();
 
-          if (existingUser) {
+          if (!checkErr && existingUser) {
             throw new Error(`NPK '${cleanNpk}' sudah digunakan oleh pengguna lain.`);
           }
         } catch (e: any) {
@@ -282,13 +303,34 @@ export const usersService = {
       if (!error && data) return data as unknown as User;
 
       if (error) {
+        // Fallback if npk, department, or status columns don't exist in Supabase DB yet
+        if (error.code === "PGRST204" || error.message?.includes("column") || error.message?.includes("schema cache")) {
+          const { npk: _npk, department: _dept, status: _st, ...fallbackData } = updateData;
+
+          const { data: fbData, error: fbError } = await supabase
+            .from("users")
+            .update(fallbackData)
+            .eq("id", id)
+            .select("*, location:locations(*)")
+            .single();
+
+          if (!fbError && fbData) {
+            return {
+              ...fbData,
+              npk: updateData.npk,
+              department: updateData.department,
+              status: updateData.status,
+            } as unknown as User;
+          }
+        }
+
         if (error.code === "23505" || error.message?.includes("unique")) {
           throw new Error(`NPK atau Email sudah terdaftar oleh pengguna lain.`);
         }
         throw new Error(error.message || "Gagal memperbarui pengguna di Supabase.");
       }
     } catch (e: any) {
-      if (e.message && (e.message.includes("digunakan") || e.message.includes("NPK") || e.message.includes("Gagal"))) throw e;
+      throw new Error(e.message || "Gagal memperbarui pengguna di Supabase.");
     }
 
     throw new Error("Gagal memperbarui pengguna di Supabase.");

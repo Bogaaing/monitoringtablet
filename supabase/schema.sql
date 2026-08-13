@@ -34,9 +34,12 @@ CREATE TABLE IF NOT EXISTS public.tablets (
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   auth_id UUID UNIQUE,
+  npk TEXT UNIQUE,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   role TEXT DEFAULT 'pic' CHECK (role IN ('admin', 'pic', 'manager')),
+  department TEXT,
+  status TEXT DEFAULT 'active',
   phone TEXT,
   location_id UUID REFERENCES public.locations(id) ON DELETE SET NULL,
   deleted_at TIMESTAMPTZ,

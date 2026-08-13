@@ -71,22 +71,50 @@ export default async function DashboardLayout({
     } catch (e) {}
   }
 
+  // Enforce correct role mapping based on NPK
+  if (currentUser) {
+    if (currentUser.npk === "11130595") {
+      currentUser.role = "admin";
+      currentUser.name = currentUser.name || "Super Admin";
+      currentUser.department = "IT & Admin";
+    } else if (currentUser.npk === "22240696") {
+      currentUser.role = "manager";
+    } else if (currentUser.npk === "33350797") {
+      currentUser.role = "pic";
+    }
+  }
+
   // 4. Fallback dynamic user object matching NPK & Role
   if (!currentUser) {
-    const fallbackNpk = userNpk || (demoRole === "admin" ? "11130595" : demoRole === "manager" ? "22240696" : "33350797");
-    const formattedName = demoRole === "admin"
+    let resolvedRole: Role = demoRole;
+    let fallbackNpk = userNpk;
+
+    if (userNpk === "11130595") {
+      resolvedRole = "admin";
+      fallbackNpk = "11130595";
+    } else if (userNpk === "22240696") {
+      resolvedRole = "manager";
+      fallbackNpk = "22240696";
+    } else if (userNpk === "33350797") {
+      resolvedRole = "pic";
+      fallbackNpk = "33350797";
+    } else {
+      fallbackNpk = userNpk || (demoRole === "admin" ? "11130595" : demoRole === "manager" ? "22240696" : "33350797");
+    }
+
+    const formattedName = resolvedRole === "admin"
       ? "Super Admin"
-      : demoRole === "manager"
+      : resolvedRole === "manager"
       ? "Manager Operations"
       : "PIC (Kepala Regu)";
 
     currentUser = {
-      id: `user-${demoRole}-session`,
+      id: `user-${resolvedRole}-session`,
       npk: fallbackNpk,
       name: formattedName,
       email: `${fallbackNpk}@tabmonitor.my.id`,
-      role: demoRole,
-      department: "Operations",
+      role: resolvedRole,
+      department: resolvedRole === "admin" ? "IT & Admin" : resolvedRole === "manager" ? "Operations" : "Inspection",
       status: "active",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

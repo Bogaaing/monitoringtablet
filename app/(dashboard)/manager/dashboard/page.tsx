@@ -383,7 +383,7 @@ export default function ManagerDashboardPage() {
 
                     {/* Area */}
                     <TableCell className="text-xs text-slate-500">
-                      {ins.tablet?.location?.area || "Area Pabrik 1"}
+                      {(ins.tablet?.location as any)?.area || ins.tablet?.location?.address || "Area Pabrik 1"}
                     </TableCell>
 
                     {/* Submitted By */}

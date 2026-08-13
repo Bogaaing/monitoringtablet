@@ -13,9 +13,12 @@ export interface Database {
         Row: {
           id: string
           auth_id: string | null
+          npk: string | null
           name: string
           email: string
           role: 'admin' | 'pic' | 'manager'
+          department: string | null
+          status: string | null
           phone: string | null
           location_id: string | null
           deleted_at: string | null
@@ -25,9 +28,12 @@ export interface Database {
         Insert: {
           id?: string
           auth_id?: string | null
+          npk?: string | null
           name: string
           email: string
           role?: 'admin' | 'pic' | 'manager'
+          department?: string | null
+          status?: string | null
           phone?: string | null
           location_id?: string | null
           deleted_at?: string | null
@@ -37,9 +43,12 @@ export interface Database {
         Update: {
           id?: string
           auth_id?: string | null
+          npk?: string | null
           name?: string
           email?: string
           role?: 'admin' | 'pic' | 'manager'
+          department?: string | null
+          status?: string | null
           phone?: string | null
           location_id?: string | null
           deleted_at?: string | null

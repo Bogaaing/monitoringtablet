@@ -12,6 +12,10 @@ export default async function RootPage() {
   const userEmail = rawEmail ? decodeURIComponent(rawEmail).trim().toLowerCase() : null;
 
   if (userNpk) {
+    if (userNpk === "11130595") redirect(authService.getRoleDashboard("admin"));
+    if (userNpk === "22240696") redirect(authService.getRoleDashboard("manager"));
+    if (userNpk === "33350797") redirect(authService.getRoleDashboard("pic"));
+
     try {
       const res = await usersService.getUsers({ npk: userNpk, limit: 1 });
       if (res.data && res.data.length > 0) {

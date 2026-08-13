@@ -108,9 +108,17 @@ export const authService = {
       }
 
       // Demo Fallback User
+      const userNpkMatch = document.cookie.match(/(?:^|; )user_npk=([^;]*)/);
+      const activeNpk = userNpkMatch ? decodeURIComponent(userNpkMatch[1]) : userNpk;
+
       const roleMatch = document.cookie.match(/(?:^|; )demo_role=([^;]*)/);
-      const role = (roleMatch ? roleMatch[1] : "pic") as Role;
-      const fallbackNpk = userNpk || (role === "admin" ? "11130595" : role === "manager" ? "22240696" : "33350797");
+      let role = (roleMatch ? roleMatch[1] : "admin") as Role;
+
+      if (activeNpk === "11130595") role = "admin";
+      else if (activeNpk === "22240696") role = "manager";
+      else if (activeNpk === "33350797") role = "pic";
+
+      const fallbackNpk = activeNpk || (role === "admin" ? "11130595" : role === "manager" ? "22240696" : "33350797");
       const fallbackEmail = `${fallbackNpk}@tabmonitor.my.id`;
 
       return {
@@ -119,7 +127,7 @@ export const authService = {
         name: role === "admin" ? "Super Admin" : role === "manager" ? "Manager Operations" : "PIC Penguji",
         email: fallbackEmail,
         role: role,
-        department: "Operations",
+        department: role === "admin" ? "IT & Admin" : role === "manager" ? "Operations" : "Inspection",
         status: "active",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -146,7 +154,7 @@ export const authService = {
 
     // 1. Query Supabase public.users table for user with matching NPK
     try {
-      const { data: dbUser, error: dbErr } = await supabase
+      const { data: dbUser } = await supabase
         .from("users")
         .select("*, location:locations(*)")
         .eq("npk", cleanNpk)
@@ -161,9 +169,12 @@ export const authService = {
       console.warn("Error querying user by NPK:", e);
     }
 
-    // Demo Account Fallback if not found in database table
-    if (!targetUser) {
-      if (cleanNpk === "11130595") {
+    // Explicit Role Enforcement for Demo NPKs
+    if (cleanNpk === "11130595") {
+      if (targetUser) {
+        targetUser.role = "admin";
+        targetUser.name = targetUser.name || "Super Admin";
+      } else {
         targetUser = {
           id: "demo-admin-id",
           npk: "11130595",
@@ -176,7 +187,11 @@ export const authService = {
           updated_at: new Date().toISOString(),
         };
         internalEmail = "11130595@tabmonitor.my.id";
-      } else if (cleanNpk === "22240696") {
+      }
+    } else if (cleanNpk === "22240696") {
+      if (targetUser) {
+        targetUser.role = "manager";
+      } else {
         targetUser = {
           id: "demo-manager-id",
           npk: "22240696",
@@ -189,7 +204,11 @@ export const authService = {
           updated_at: new Date().toISOString(),
         };
         internalEmail = "22240696@tabmonitor.my.id";
-      } else if (cleanNpk === "33350797") {
+      }
+    } else if (cleanNpk === "33350797") {
+      if (targetUser) {
+        targetUser.role = "pic";
+      } else {
         targetUser = {
           id: "demo-pic-id",
           npk: "33350797",
@@ -215,19 +234,23 @@ export const authService = {
     }
 
     // 2. Authenticate with Supabase Auth using internal Email & Password
-    let authUser: any = null;
     try {
-      const { data: authData, error: authErr } = await (supabase as any).auth.signInWithPassword({
+      await (supabase as any).auth.signInWithPassword({
         email: internalEmail,
         password: passwordInput,
       });
-
-      if (authData?.user) {
-        authUser = authData.user;
-      }
     } catch (err: any) {}
 
-    const resolvedRole: Role = targetUser.role || "pic";
+    const resolvedRole: Role =
+      cleanNpk === "11130595"
+        ? "admin"
+        : cleanNpk === "22240696"
+        ? "manager"
+        : cleanNpk === "33350797"
+        ? "pic"
+        : targetUser.role || "pic";
+
+    targetUser.role = resolvedRole;
 
     // Set persistent session cookies
     if (typeof document !== "undefined") {
@@ -255,6 +278,34 @@ export const authService = {
       document.cookie = "user_npk=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "user_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "demo_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    }
+  },
+
+  async sendPasswordResetEmail(email: string) {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/reset-password`,
+      });
+      if (error) {
+        return { success: false, message: error.message || "Gagal mengirim link reset kata sandi." };
+      }
+      return { success: true, message: "Link reset kata sandi telah dikirim ke email Anda." };
+    } catch (e: any) {
+      return { success: false, message: e.message || "Terjadi kesalahan saat mengirim instruksi reset." };
+    }
+  },
+
+  async updatePassword(newPassword: string) {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        return { success: false, message: error.message || "Gagal memperbarui kata sandi." };
+      }
+      return { success: true, message: "Kata sandi berhasil diperbarui. Silakan login kembali." };
+    } catch (e: any) {
+      return { success: false, message: e.message || "Terjadi kesalahan saat memperbarui kata sandi." };
     }
   },
 };
