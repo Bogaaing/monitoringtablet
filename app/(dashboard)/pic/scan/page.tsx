@@ -297,10 +297,10 @@ export default function PicScanPage() {
 
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
-                Inspeksi Berhasil Dikirimkan!
+                Inspeksi Berhasil Disimpan
               </h2>
               <p className="text-sm text-slate-500 max-w-md mx-auto">
-                Data inspeksi tablet <span className="font-mono font-bold text-indigo-600">{scannedTablet?.qr_code}</span> telah tersimpan di Supabase dan sedang menunggu persetujuan Manager.
+                Data inspeksi dan dokumentasi unit <span className="font-mono font-bold text-indigo-600">{scannedTablet?.qr_code}</span> telah tersimpan.
               </p>
             </div>
 

@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Tablet } from "@/types";
-import { InspectionPeriod } from "@/types";
+import { Tablet, InspectionPeriod } from "@/types";
 import {
   TabletCondition,
   ChargerCondition,
@@ -10,24 +9,32 @@ import {
   PhotoType,
 } from "@/services/inspections.service";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Camera,
-  Upload,
   X,
-  BatteryCharging,
+  BatteryMedium,
   MapPin,
   CheckCircle2,
   AlertTriangle,
-  Tablet as TabletIcon,
-  ShieldAlert,
+  RefreshCw,
+  Trash2,
+  ClipboardCheck,
+  Send,
+  ShieldCheck,
 } from "lucide-react";
 
 import { WatermarkPreviewModal } from "@/components/pic/watermark-preview-modal";
 import { WatermarkResult } from "@/lib/watermark-utils";
 import { authService } from "@/services/auth.service";
-import { ShieldCheck } from "lucide-react";
+
+interface PhotoSlotItem {
+  file: File;
+  previewUrl: string;
+  type: PhotoType;
+  capturedAt: string;
+  locationName: string;
+  gpsCoords?: string | null;
+}
 
 interface InspectionFormProps {
   tablet: Tablet;
@@ -49,30 +56,30 @@ interface InspectionFormProps {
 export function InspectionForm({
   tablet,
   activePeriod,
-  picId,
   onSubmit,
   onCancel,
 }: InspectionFormProps) {
+  // Form Field States
   const [tabletCondition, setTabletCondition] = useState<TabletCondition>("good");
   const [chargerCondition, setChargerCondition] = useState<ChargerCondition>("available");
   const [caseCondition, setCaseCondition] = useState<CaseCondition>("good");
   const [batteryPct, setBatteryPct] = useState<number>(85);
   const [notes, setNotes] = useState<string>("");
 
-  // Photo uploads (Min 1, Max 5)
-  const [selectedPhotos, setSelectedPhotos] = useState<
-    { file: File; previewUrl: string; type: PhotoType }[]
-  >([]);
+  // 2 Photo Slots (Front & Back)
+  const [frontPhoto, setFrontPhoto] = useState<PhotoSlotItem | null>(null);
+  const [backPhoto, setBackPhoto] = useState<PhotoSlotItem | null>(null);
 
   // Watermark Modal state
   const [isWatermarkModalOpen, setIsWatermarkModalOpen] = useState(false);
-  const [targetPhotoType, setTargetPhotoType] = useState<PhotoType>("front");
+  const [targetPhotoSlot, setTargetPhotoSlot] = useState<"front" | "back">("front");
   const [picName, setPicName] = useState<string>("Ahmad Rizky");
 
   // GPS Location
   const [gpsLocation, setGpsLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Fetch current PIC profile & Auto-acquire Geolocation on mount
   useEffect(() => {
@@ -91,58 +98,93 @@ export function InspectionForm({
     }
   }, []);
 
-  const handleOpenWatermarkModal = (type: PhotoType) => {
-    if (selectedPhotos.length >= 5) {
-      alert("Maksimal 5 foto dapat diunggah per inspeksi.");
-      return;
-    }
-    setTargetPhotoType(type);
+  const handleOpenPhotoCapture = (slot: "front" | "back") => {
+    setTargetPhotoSlot(slot);
     setIsWatermarkModalOpen(true);
   };
 
   const handleWatermarkConfirmed = (result: WatermarkResult, photoType: PhotoType) => {
-    setSelectedPhotos((prev) => [
-      ...prev,
-      { file: result.file, previewUrl: result.previewUrl, type: photoType },
-    ]);
-  };
-
-  const handleRemovePhoto = (index: number) => {
-    setSelectedPhotos((prev) => {
-      const copy = [...prev];
-      URL.revokeObjectURL(copy[index].previewUrl);
-      copy.splice(index, 1);
-      return copy;
+    const now = new Date();
+    const formattedTime = now.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
+    const formattedDate = now.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
+    const photoItem: PhotoSlotItem = {
+      file: result.file,
+      previewUrl: result.previewUrl,
+      type: photoType,
+      capturedAt: `${formattedDate}, ${formattedTime} WIB`,
+      locationName: tablet.location?.name || "Gudang Utama A",
+      gpsCoords: gpsLocation
+        ? `${gpsLocation.lat.toFixed(5)}, ${gpsLocation.lng.toFixed(5)}`
+        : null,
+    };
+
+    if (targetPhotoSlot === "front") {
+      if (frontPhoto?.previewUrl) URL.revokeObjectURL(frontPhoto.previewUrl);
+      setFrontPhoto(photoItem);
+    } else {
+      if (backPhoto?.previewUrl) URL.revokeObjectURL(backPhoto.previewUrl);
+      setBackPhoto(photoItem);
+    }
   };
 
-  const handleSubmitForm = async (e: React.FormEvent) => {
+  const handleRemovePhoto = (slot: "front" | "back") => {
+    if (slot === "front") {
+      if (frontPhoto?.previewUrl) URL.revokeObjectURL(frontPhoto.previewUrl);
+      setFrontPhoto(null);
+    } else {
+      if (backPhoto?.previewUrl) URL.revokeObjectURL(backPhoto.previewUrl);
+      setBackPhoto(null);
+    }
+  };
+
+  const handleValidateAndPromptConfirm = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    // Validation 1: Notes required if condition is not good
+    // Validation 1: Notes required if tablet is not good
     if (tabletCondition !== "good" && (!notes || notes.trim().length < 5)) {
-      setErrorMessage("Catatan wajib diisi (minimal 5 karakter) apabila kondisi tablet tidak Baik.");
+      setErrorMessage("Catatan inspeksi wajib diisi jika kondisi fisik tablet bukan Baik.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
-    // Validation 2: Min 1 photo
-    if (selectedPhotos.length < 1) {
-      setErrorMessage("Wajib mengunggah minimal 1 foto fisik tablet.");
+    // Validation 2: Photo evidence (minimal 1 foto depan atau belakang)
+    if (!frontPhoto && !backPhoto) {
+      setErrorMessage("Wajib mengambil minimal 1 foto fisik tablet sebagai bukti dokumentasi.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false);
     setSubmitting(true);
+    setErrorMessage(null);
+
+    const photosList: { file: File | Blob; type: PhotoType }[] = [];
+    if (frontPhoto) photosList.push({ file: frontPhoto.file, type: "front" });
+    if (backPhoto) photosList.push({ file: backPhoto.file, type: "back" });
+
     try {
       await onSubmit({
         tablet_condition: tabletCondition,
         charger_condition: chargerCondition,
         case_condition: caseCondition,
         battery_pct: batteryPct,
-        notes,
+        notes: notes.trim() || undefined,
         gps_lat: gpsLocation?.lat || null,
         gps_lng: gpsLocation?.lng || null,
-        photos: selectedPhotos.map((p) => ({ file: p.file, type: p.type })),
+        photos: photosList,
       });
     } catch (err: any) {
       setErrorMessage(err.message || "Gagal mengirimkan data inspeksi.");
@@ -152,75 +194,187 @@ export function InspectionForm({
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-xl border-indigo-100 dark:border-indigo-950">
-      <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TabletIcon className="h-5 w-5 text-indigo-600" />
-              <span>Formulir Inspeksi Tablet</span>
-            </CardTitle>
-            <CardDescription className="text-xs mt-0.5">
-              {activePeriod.name} — Unit:{" "}
-              <span className="font-mono font-bold text-indigo-600">{tablet.qr_code}</span>
-            </CardDescription>
+    <div className="w-full max-w-xl mx-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xl overflow-hidden animate-in fade-in">
+      {/* ── 1. HEADER (Exact match to reference) ── */}
+      <div className="p-5 sm:p-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-[#473bf0] dark:text-indigo-400 border border-indigo-100/80 dark:border-indigo-900/50">
+              <ClipboardCheck className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
+                Formulir Inspeksi Tablet
+              </h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Periode {activePeriod.name} — Unit:{" "}
+                <span className="font-bold text-[#473bf0] dark:text-indigo-400 font-mono">
+                  {tablet.qr_code}
+                </span>
+              </p>
+            </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
 
-      <CardContent className="p-6">
-        <form onSubmit={handleSubmitForm} className="space-y-6">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition"
+            title="Tutup"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-5 sm:p-6 space-y-6">
+        <form onSubmit={handleValidateAndPromptConfirm} className="space-y-6">
+          {/* Error Alert */}
           {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>{errorMessage}</span>
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 dark:bg-rose-950/30 dark:border-rose-900/50 text-xs font-semibold flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
+                <span>{errorMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="text-xs font-bold text-rose-600 underline ml-2 shrink-0"
+              >
+                Tutup
+              </button>
             </div>
           )}
 
-          {/* Device Summary Box */}
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          {/* ── 2. INFORMASI TABLET CARD (2-Column clean layout) ── */}
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
             <div>
-              <span className="text-slate-400">Kode Tablet</span>
-              <p className="font-mono font-bold text-indigo-600">{tablet.qr_code}</p>
+              <span className="text-slate-400 block mb-0.5 font-medium">Kode Tablet</span>
+              <span className="font-mono font-bold text-[#473bf0] dark:text-indigo-400 text-sm">
+                {tablet.qr_code}
+              </span>
             </div>
             <div>
-              <span className="text-slate-400">Serial Number</span>
-              <p className="font-mono font-semibold">{tablet.serial_number}</p>
+              <span className="text-slate-400 block mb-0.5 font-medium">Serial Number</span>
+              <span className="font-mono font-medium text-slate-800 dark:text-slate-200 text-sm truncate block">
+                {tablet.serial_number || "-"}
+              </span>
             </div>
             <div>
-              <span className="text-slate-400">Merk / Model</span>
-              <p className="font-semibold">{tablet.brand} - {tablet.model}</p>
+              <span className="text-slate-400 block mb-0.5 font-medium">Merk / Model</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate block">
+                {tablet.brand} - {tablet.model}
+              </span>
             </div>
             <div>
-              <span className="text-slate-400">Lokasi</span>
-              <p className="font-semibold">{tablet.location?.name || "Belum Ditempatkan"}</p>
+              <span className="text-slate-400 block mb-0.5 font-medium">Lokasi</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate block">
+                {tablet.location?.name || "Melamine"}
+              </span>
             </div>
           </div>
 
-          {/* Field 1: Tablet Condition */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Kondisi Fisik Tablet <span className="text-rose-500">*</span>
+          {/* ── 3. FIELD 1: KONDISI FISIK TABLET ── */}
+          <div className="space-y-2.5">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+              <span>Kondisi Fisik Tablet</span>
+              <span className="text-rose-500">*</span>
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+
+            {/* Row 1: 3 buttons */}
+            <div className="grid grid-cols-3 gap-2.5">
+              {/* Baik (Selected: Emerald outline) */}
+              <button
+                type="button"
+                onClick={() => setTabletCondition("good")}
+                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center border min-h-[44px] flex items-center justify-center ${
+                  tabletCondition === "good"
+                    ? "border-emerald-500 text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/30"
+                    : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                }`}
+              >
+                Baik
+              </button>
+
+              {/* Kerusakan Ringan */}
+              <button
+                type="button"
+                onClick={() => setTabletCondition("minor_damage")}
+                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center border min-h-[44px] flex items-center justify-center ${
+                  tabletCondition === "minor_damage"
+                    ? "border-amber-500 text-amber-600 bg-amber-50/60 dark:bg-amber-950/30"
+                    : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                }`}
+              >
+                Kerusakan Ringan
+              </button>
+
+              {/* Kerusakan Berat */}
+              <button
+                type="button"
+                onClick={() => setTabletCondition("major_damage")}
+                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center border min-h-[44px] flex items-center justify-center ${
+                  tabletCondition === "major_damage"
+                    ? "border-rose-500 text-rose-600 bg-rose-50/60 dark:bg-rose-950/30"
+                    : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                }`}
+              >
+                Kerusakan Berat
+              </button>
+            </div>
+
+            {/* Row 2: 2 buttons */}
+            <div className="grid grid-cols-3 gap-2.5">
+              {/* Hilang */}
+              <button
+                type="button"
+                onClick={() => setTabletCondition("missing")}
+                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center border min-h-[44px] flex items-center justify-center ${
+                  tabletCondition === "missing"
+                    ? "border-rose-500 text-rose-600 bg-rose-50/60 dark:bg-rose-950/30"
+                    : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                }`}
+              >
+                Hilang
+              </button>
+
+              {/* Tidak Ditemukan */}
+              <button
+                type="button"
+                onClick={() => setTabletCondition("not_found")}
+                className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center border min-h-[44px] flex items-center justify-center ${
+                  tabletCondition === "not_found"
+                    ? "border-rose-500 text-rose-600 bg-rose-50/60 dark:bg-rose-950/30"
+                    : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                }`}
+              >
+                Tidak Ditemukan
+              </button>
+
+              {/* Empty placeholder for clean 3-col alignment */}
+              <div className="invisible" />
+            </div>
+          </div>
+
+          {/* ── 4. FIELD 2: KONDISI CHARGER ── */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+              <span>Kondisi Charger</span>
+              <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
               {[
-                { value: "good", label: "Good (Baik)", color: "border-emerald-500 text-emerald-600 bg-emerald-50" },
-                { value: "minor_damage", label: "Minor Damage", color: "border-amber-500 text-amber-600 bg-amber-50" },
-                { value: "major_damage", label: "Major Damage", color: "border-rose-500 text-rose-600 bg-rose-50" },
-                { value: "missing", label: "Missing (Hilang)", color: "border-purple-500 text-purple-600 bg-purple-50" },
-                { value: "not_found", label: "Not Found", color: "border-slate-500 text-slate-600 bg-slate-50" },
+                { value: "available" as ChargerCondition, label: "Tersedia" },
+                { value: "missing" as ChargerCondition, label: "Hilang" },
+                { value: "damaged" as ChargerCondition, label: "Rusak" },
               ].map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => setTabletCondition(opt.value as TabletCondition)}
-                  className={`p-2.5 rounded-xl border-2 text-xs font-bold transition-all text-center ${
-                    tabletCondition === opt.value
-                      ? `${opt.color} shadow-sm ring-2 ring-indigo-500/20`
-                      : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50"
+                  onClick={() => setChargerCondition(opt.value)}
+                  className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center border min-h-[44px] flex items-center justify-center ${
+                    chargerCondition === opt.value
+                      ? "border-[#473bf0] bg-indigo-50/70 text-[#473bf0] dark:bg-indigo-950/40 dark:text-indigo-300"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"
                   }`}
                 >
                   {opt.label}
@@ -229,184 +383,345 @@ export function InspectionForm({
             </div>
           </div>
 
-          {/* Field 2 & 3: Charger & Case Condition */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Kondisi Charger <span className="text-rose-500">*</span>
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: "available", label: "Available" },
-                  { value: "missing", label: "Missing" },
-                  { value: "damaged", label: "Damaged" },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setChargerCondition(opt.value as ChargerCondition)}
-                    className={`py-2 px-2 rounded-xl border text-xs font-semibold text-center transition-all ${
-                      chargerCondition === opt.value
-                        ? "border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 font-bold"
-                        : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Kondisi Casing / Case <span className="text-rose-500">*</span>
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: "good", label: "Good" },
-                  { value: "damaged", label: "Damaged" },
-                  { value: "missing", label: "Missing" },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setCaseCondition(opt.value as CaseCondition)}
-                    className={`py-2 px-2 rounded-xl border text-xs font-semibold text-center transition-all ${
-                      caseCondition === opt.value
-                        ? "border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 font-bold"
-                        : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+          {/* ── 5. FIELD 3: KONDISI CASING / PELINDUNG ── */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+              <span>Kondisi Casing / Pelindung</span>
+              <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
+              {[
+                { value: "good" as CaseCondition, label: "Baik" },
+                { value: "damaged" as CaseCondition, label: "Rusak" },
+                { value: "missing" as CaseCondition, label: "Hilang" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setCaseCondition(opt.value)}
+                  className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all text-center border min-h-[44px] flex items-center justify-center ${
+                    caseCondition === opt.value
+                      ? "border-[#473bf0] bg-indigo-50/70 text-[#473bf0] dark:bg-indigo-950/40 dark:text-indigo-300"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Field 4: Battery Percentage */}
-          <div className="space-y-2">
+          {/* ── 6. FIELD 4: PERSENTASE BATERAI ── */}
+          <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <BatteryCharging className="h-4 w-4 text-emerald-600" />
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <BatteryMedium className="h-4 w-4 text-emerald-600 shrink-0" />
                 <span>Persentase Baterai ({batteryPct}%)</span>
               </label>
-              <span className="text-xs font-mono font-bold text-indigo-600">{batteryPct}%</span>
+              <span className="text-xs font-mono font-bold text-[#473bf0] dark:text-indigo-400">
+                {batteryPct}%
+              </span>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={batteryPct}
-              onChange={(e) => setBatteryPct(Number(e.target.value))}
-              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-            />
+
+            <div className="pt-1">
+              <input
+                type="range"
+                min="1"
+                max="100"
+                value={batteryPct}
+                onChange={(e) => setBatteryPct(Number(e.target.value))}
+                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#473bf0]"
+              />
+            </div>
           </div>
 
-          {/* Field 5: Notes */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Catatan Inspeksi {tabletCondition !== "good" && <span className="text-rose-500">* (Wajib)</span>}
+          {/* ── 7. FIELD 5: CATATAN INSPEKSI ── */}
+          <div className="space-y-1.5 pt-1">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              Catatan Inspeksi {tabletCondition !== "good" && <span className="text-rose-500">*</span>}
             </label>
             <textarea
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={
-                tabletCondition !== "good"
-                  ? "Jelaskan detail kerusakan atau kendala yang ditemukan pada tablet..."
-                  : "Catatan tambahan (opsional)..."
-              }
-              className="w-full p-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+              placeholder="Tuliskan catatan atau temuan inspeksi di sini..."
+              className="w-full p-3.5 text-xs rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-[#473bf0] focus:outline-none leading-relaxed transition"
             />
           </div>
 
-          {/* Field 6: Photo Upload (Min 1, Max 5) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Camera className="h-4 w-4 text-indigo-600" />
-                <span>Unggah Foto Fisik (Min 1, Max 5) <span className="text-rose-500">*</span></span>
-              </label>
-              <span className="text-xs text-slate-500 font-medium">
-                {selectedPhotos.length} / 5 Foto
+          {/* ── 8. DOKUMENTASI FOTO TABLET (2 Clean Self-Contained Slots) ── */}
+          <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Camera className="h-4 w-4 text-[#473bf0]" />
+                  <span>Dokumentasi Foto Tablet</span>
+                  <span className="text-rose-500">*</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Foto digunakan sebagai bukti dokumentasi inspeksi.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono font-bold text-[#473bf0] bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-900 shrink-0">
+                {[frontPhoto, backPhoto].filter(Boolean).length}/2 Foto
               </span>
             </div>
 
-            {/* Thumbnail Preview Grid */}
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-              {selectedPhotos.map((photo, index) => (
-                <div key={index} className="relative aspect-square rounded-xl overflow-hidden border-2 border-indigo-500 group shadow-sm">
-                  <img src={photo.previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePhoto(index)}
-                    className="absolute top-1 right-1 p-1 bg-rose-600 text-white rounded-full opacity-90 hover:opacity-100 transition-opacity"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                  <span className="absolute top-1 left-1 bg-emerald-500/90 text-white text-[8px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm">
-                    <ShieldCheck className="w-2.5 h-2.5" />
-                    <span>WM</span>
-                  </span>
-                  <span className="absolute bottom-1 left-1 right-1 bg-slate-900/80 text-white text-[9px] font-bold text-center rounded px-1 uppercase truncate">
-                    {photo.type}
-                  </span>
-                </div>
-              ))}
+            {/* 2 Dedicated Photo Slots Grid with clean responsive spacing */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
+              {/* Slot 1: Foto Depan */}
+              <div className="flex flex-col space-y-1.5 min-w-0">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">
+                  Foto Depan <span className="text-rose-500">*</span>
+                </span>
 
-              {selectedPhotos.length < 5 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleOpenWatermarkModal(
-                      selectedPhotos.length === 0
-                        ? "front"
-                        : selectedPhotos.length === 1
-                        ? "back"
-                        : selectedPhotos.length === 2
-                        ? "screen"
-                        : "accessory"
-                    )
-                  }
-                  className="aspect-square rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-800 hover:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col items-center justify-center p-2 text-center transition-all group"
-                >
-                  <Camera className="h-6 w-6 text-indigo-600 mb-1 group-hover:scale-110 transition-transform" />
-                  <span className="text-[10px] font-bold text-indigo-600">+ Ambil Foto</span>
-                  <span className="text-[8px] text-slate-400 font-semibold mt-0.5">Auto-Watermark</span>
-                </button>
-              )}
+                {frontPhoto ? (
+                  <div className="space-y-1.5 flex-1 flex flex-col">
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-600 shadow-sm aspect-[4/3] bg-slate-950 w-full">
+                      <img
+                        src={frontPhoto.previewUrl}
+                        alt="Foto Depan"
+                        className="w-full h-full object-contain"
+                      />
+                      {/* Evidence Overlay Badge */}
+                      <div className="absolute inset-x-0 bottom-0 bg-slate-950/85 backdrop-blur-xs p-1.5 text-white text-[9px] space-y-0.5 border-t border-white/10">
+                        <div className="flex items-center justify-between font-mono font-bold">
+                          <span className="text-emerald-400">✓ DEPAN</span>
+                          <span className="text-[8px] truncate">{tablet.qr_code}</span>
+                        </div>
+                        <div className="text-slate-300 text-[8px] truncate font-mono">
+                          {frontPhoto.capturedAt}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1.5 pt-0.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenPhotoCapture("front")}
+                        className="flex-1 text-[11px] font-bold rounded-xl h-8 px-2 border-slate-300 gap-1"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        <span>Ganti</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemovePhoto("front")}
+                        className="text-[11px] font-bold rounded-xl h-8 text-rose-600 border-rose-200 hover:bg-rose-50 px-2"
+                        title="Hapus Foto"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => handleOpenPhotoCapture("front")}
+                    className="w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-indigo-300 dark:border-indigo-800 hover:border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20 flex flex-col items-center justify-center p-3 text-center cursor-pointer transition-all hover:scale-[1.01] group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center text-[#473bf0] group-hover:scale-110 transition-transform mb-1 border border-indigo-100">
+                      <Camera className="h-4.5 w-4.5" />
+                    </div>
+                    <span className="text-xs font-bold text-[#473bf0] leading-tight block">
+                      Ambil Foto Depan
+                    </span>
+                    <span className="text-[9px] text-slate-400 mt-0.5 block leading-none">
+                      Kamera / Galeri
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Slot 2: Foto Belakang */}
+              <div className="flex flex-col space-y-1.5 min-w-0">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">
+                  Foto Belakang
+                </span>
+
+                {backPhoto ? (
+                  <div className="space-y-1.5 flex-1 flex flex-col">
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-600 shadow-sm aspect-[4/3] bg-slate-950 w-full">
+                      <img
+                        src={backPhoto.previewUrl}
+                        alt="Foto Belakang"
+                        className="w-full h-full object-contain"
+                      />
+                      {/* Evidence Overlay Badge */}
+                      <div className="absolute inset-x-0 bottom-0 bg-slate-950/85 backdrop-blur-xs p-1.5 text-white text-[9px] space-y-0.5 border-t border-white/10">
+                        <div className="flex items-center justify-between font-mono font-bold">
+                          <span className="text-emerald-400">✓ BELAKANG</span>
+                          <span className="text-[8px] truncate">{tablet.qr_code}</span>
+                        </div>
+                        <div className="text-slate-300 text-[8px] truncate font-mono">
+                          {backPhoto.capturedAt}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1.5 pt-0.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenPhotoCapture("back")}
+                        className="flex-1 text-[11px] font-bold rounded-xl h-8 px-2 border-slate-300 gap-1"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        <span>Ganti</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemovePhoto("back")}
+                        className="text-[11px] font-bold rounded-xl h-8 text-rose-600 border-rose-200 hover:bg-rose-50 px-2"
+                        title="Hapus Foto"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => handleOpenPhotoCapture("back")}
+                    className="w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-500 bg-slate-50 dark:bg-slate-900/40 flex flex-col items-center justify-center p-3 text-center cursor-pointer transition-all hover:scale-[1.01] group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-500 group-hover:text-[#473bf0] group-hover:scale-110 transition-all mb-1 border border-slate-200">
+                      <Camera className="h-4.5 w-4.5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 group-hover:text-[#473bf0] leading-tight block">
+                      Ambil Foto Belakang
+                    </span>
+                    <span className="text-[9px] text-slate-400 mt-0.5 block leading-none">
+                      Kamera / Galeri
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Watermark Capture & Preview Modal */}
-          <WatermarkPreviewModal
-            isOpen={isWatermarkModalOpen}
-            onClose={() => setIsWatermarkModalOpen(false)}
-            onConfirmPhoto={handleWatermarkConfirmed}
-            photoType={targetPhotoType}
-            tabletCode={tablet.qr_code}
-            deviceModel={tablet.model ? `${tablet.model} (${tablet.brand})` : undefined}
-            assignedLocation={tablet.location?.name || "Gudang Utama A"}
-            picName={picName}
-            gpsCoords={gpsLocation}
-          />
-
-          {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
+          {/* ── 9. ACTION BUTTONS ── */}
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={submitting}
+              className="min-h-[48px] px-5 rounded-2xl font-bold text-xs border-slate-300"
+            >
               Batal
             </Button>
             <Button
               type="submit"
               disabled={submitting}
-              className="bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-700 hover:to-emerald-700 font-bold px-6 text-sm"
+              className="min-h-[48px] px-6 rounded-2xl bg-[#473bf0] hover:bg-indigo-700 text-white font-black text-xs shadow-lg shadow-indigo-500/25 gap-2 flex-1 sm:flex-initial"
             >
-              {submitting ? "Mengirim Inspeksi..." : "Kirim Inspeksi Tablet"}
+              <Send className="h-4 w-4" />
+              <span>{submitting ? "Menyimpan Data..." : "Kirim Formulir Inspeksi"}</span>
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+
+        {/* Watermark Capture & Preview Modal */}
+        <WatermarkPreviewModal
+          isOpen={isWatermarkModalOpen}
+          onClose={() => setIsWatermarkModalOpen(false)}
+          onConfirmPhoto={handleWatermarkConfirmed}
+          photoType={targetPhotoSlot}
+          tabletCode={tablet.qr_code}
+          deviceModel={tablet.model ? `${tablet.model} (${tablet.brand})` : undefined}
+          assignedLocation={tablet.location?.name || "Melamine"}
+          picName={picName}
+          gpsCoords={gpsLocation}
+        />
+
+        {/* ── MODAL KONFIRMASI PENGIRIMAN ── */}
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in zoom-in-95">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h4 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-[#473bf0]" />
+                  <span>Konfirmasi Pengiriman Inspeksi</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <p className="text-slate-600 dark:text-slate-400">
+                  Pastikan data hasil inspeksi unit <strong className="text-indigo-600 font-bold">{tablet.qr_code}</strong> sudah sesuai dengan kondisi fisik saat ini:
+                </p>
+
+                {/* Summary Box */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Kondisi Fisik:</span>
+                    <span className="font-bold text-emerald-600">
+                      {tabletCondition === "good"
+                        ? "Baik"
+                        : tabletCondition === "minor_damage"
+                        ? "Kerusakan Ringan"
+                        : tabletCondition === "major_damage"
+                        ? "Kerusakan Berat"
+                        : tabletCondition === "missing"
+                        ? "Hilang"
+                        : "Tidak Ditemukan"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Charger &amp; Case:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      Charger ({chargerCondition}) | Case ({caseCondition})
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Baterai:</span>
+                    <span className="font-mono font-bold text-emerald-600">{batteryPct}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Foto Dokumentasi:</span>
+                    <span className="font-bold text-indigo-600">
+                      {[frontPhoto, backPhoto].filter(Boolean).length} Foto Terlampir
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowConfirmModal(false)}
+                  disabled={submitting}
+                  className="min-h-[48px] px-5 rounded-xl font-bold text-xs"
+                >
+                  Periksa Lagi
+                </Button>
+                <Button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleConfirmSubmit}
+                  className="bg-[#473bf0] hover:bg-indigo-700 active:scale-95 text-white font-black text-xs min-h-[48px] px-6 rounded-xl gap-2 shadow-lg shadow-indigo-500/25"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{submitting ? "Menyimpan..." : "Ya, Kirim Sekarang"}</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

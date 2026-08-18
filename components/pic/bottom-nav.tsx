@@ -10,7 +10,7 @@ export function PicBottomNav() {
 
   const navItems = [
     {
-      label: "Home",
+      label: "Beranda",
       href: "/pic/dashboard",
       icon: Home,
     },
@@ -26,12 +26,12 @@ export function PicBottomNav() {
       isPrimary: true,
     },
     {
-      label: "History",
+      label: "Riwayat",
       href: "/pic/inspections",
       icon: History,
     },
     {
-      label: "Profile",
+      label: "Profil",
       href: "/pic/profile",
       icon: User,
     },
