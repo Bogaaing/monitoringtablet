@@ -84,45 +84,35 @@ export default function TabletQrPreviewPage() {
       <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl">
         <div
           id={containerId}
-          className="p-8 bg-white text-slate-900 rounded-2xl border-4 border-slate-950 flex flex-col items-center justify-center text-center space-y-4 w-[320px] print:w-full print:border-4 print:border-black"
+          className="p-8 bg-white text-slate-900 rounded-2xl border-4 border-slate-950 flex flex-col items-center justify-center text-center space-y-4 w-[320px] print:w-full print:border-4 print:border-black shadow-sm"
         >
-          {/* Header: [ PROPAN LOGO ] PT. PROPAN RAYA ICC */}
-          <div className="flex items-center justify-center gap-2.5 border-b-2 border-slate-200 pb-3 w-full">
-            <PropanLogo height={32} className="h-8 w-auto shrink-0" color="#2E2A7B" />
-            <span
-              className="font-bold text-[#2E2A7B] tracking-wide text-center whitespace-nowrap"
-              style={{
-                fontSize: "15px",
-                fontWeight: 700,
-                color: "#2E2A7B",
-                letterSpacing: "0.03em",
-                lineHeight: "1.2",
-              }}
-            >
+          {/* Header: PT. PROPAN RAYA ICC */}
+          <div className="w-full border-b border-slate-200 pb-3 text-center">
+            <span className="font-extrabold text-[17px] text-[#4F46E5] tracking-wider uppercase block leading-tight">
               PT. PROPAN RAYA ICC
             </span>
           </div>
 
-          <div className="p-3 bg-white rounded-2xl border-2 border-slate-300 shadow-inner">
+          <div className="p-2.5 bg-white rounded-xl border border-slate-100 flex items-center justify-center">
             <QRCodeCanvas
               value={qrPayload}
-              size={200}
+              size={180}
               level="H"
               includeMargin={true}
             />
           </div>
 
-          <div className="space-y-1 w-full pt-3 border-t-2 border-slate-200 text-center">
-            <div className="font-mono text-xl font-black text-[#2E2A7B] tracking-wider uppercase">
-              {tablet.qr_code || "TB 04"}
+          <div className="space-y-1.5 w-full pt-3 border-t border-slate-200 text-center">
+            <div className="font-mono text-xl font-black text-[#4F46E5] tracking-wider uppercase">
+              {tablet.qr_code || "TB 10"}
             </div>
-            <div className="text-xs font-bold text-slate-800 truncate">
+            <div className="text-xs font-bold text-slate-800 truncate px-2">
               {tablet.model ? (tablet.brand ? `${tablet.model} (${tablet.brand})` : tablet.model) : "Exproof (P9000)"}
             </div>
-            <div className="text-[11px] font-mono text-slate-600 font-medium">
-              S/N: {tablet.serial_number || "3559.2810.1240.862"}
+            <div className="text-[11px] font-mono text-slate-600 font-medium truncate px-2">
+              S/N: {tablet.serial_number || "3559.2810.1241.290"}
             </div>
-            <div className="text-[11px] font-semibold text-slate-700 truncate">
+            <div className="text-xs font-semibold text-slate-700 truncate px-2">
               Loc: {tablet.location?.name || "Politur"}
             </div>
           </div>

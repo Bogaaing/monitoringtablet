@@ -48,7 +48,7 @@ export function DashboardShell({
 
   // Admin & Manager Roles: Render Desktop First Layout with Sidebar & Top Navbar
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 print:bg-white print:min-h-0 print:block">
       {/* Sidebar */}
       <Sidebar
         userRole={user?.role || "admin"}
@@ -57,7 +57,7 @@ export function DashboardShell({
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 print:block print:w-full">
         <Navbar
           user={user}
           activePeriod={activePeriod}
@@ -65,7 +65,7 @@ export function DashboardShell({
           onSignOut={handleSignOut}
         />
 
-        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
           {children}
         </main>
       </div>

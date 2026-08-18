@@ -499,21 +499,20 @@ export default function AdminTabletsPage() {
                   key={tab.id}
                   className="p-4 bg-white dark:bg-slate-800 border-2 border-slate-900 rounded-2xl flex flex-col items-center text-center space-y-2 shadow-sm"
                 >
-                  <div className="flex items-center justify-center gap-1.5 border-b border-slate-200 dark:border-slate-700 pb-1.5 w-full">
-                    <PropanLogo height={18} className="h-4.5 w-auto shrink-0" color="#2E2A7B" />
-                    <span className="font-bold text-[10px] text-[#2E2A7B] tracking-wider whitespace-nowrap">
+                  <div className="border-b border-slate-200 dark:border-slate-700 pb-1.5 w-full text-center">
+                    <span className="font-extrabold text-[11px] text-[#4F46E5] tracking-wider uppercase block">
                       PT. PROPAN RAYA ICC
                     </span>
                   </div>
                   <QRCodeSVG value={tab.qr_code} size={110} level="H" />
-                  <div className="space-y-0.5 w-full pt-1 border-t border-slate-200 dark:border-slate-700">
-                    <span className="font-mono text-xs font-black text-[#2E2A7B]">
+                  <div className="space-y-0.5 w-full pt-1 border-t border-slate-200 dark:border-slate-700 text-center">
+                    <span className="font-mono text-xs font-black text-[#4F46E5] block uppercase">
                       {tab.qr_code}
                     </span>
-                    <div className="text-[10px] text-slate-600 font-bold truncate">
-                      {tab.model} ({tab.brand})
+                    <div className="text-[10px] text-slate-700 font-bold truncate">
+                      {tab.model ? (tab.brand ? `${tab.model} (${tab.brand})` : tab.model) : "-"}
                     </div>
-                    <div className="text-[9px] font-mono text-slate-500">
+                    <div className="text-[9px] font-mono text-slate-500 truncate">
                       S/N: {tab.serial_number}
                     </div>
                   </div>

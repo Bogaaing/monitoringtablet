@@ -140,7 +140,7 @@ export function Sidebar({ userRole = "admin", isOpen = false, onClose }: Sidebar
       {/* Sidebar Container: Pure White (#FFFFFF), 1px border (#EEF2F7), Soft Shadow */}
       <aside
         className={cn(
-          "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-white text-[#111827] transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-[#EEF2F7] shadow-[0_0_24px_rgba(15,23,42,0.03)]",
+          "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-white text-[#111827] transition-all duration-300 ease-in-out lg:static lg:translate-x-0 border-r border-[#EEF2F7] shadow-[0_0_24px_rgba(15,23,42,0.03)] print:hidden",
           isCollapsed ? "w-[76px]" : "w-[270px]",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}

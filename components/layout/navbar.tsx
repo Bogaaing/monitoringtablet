@@ -43,7 +43,7 @@ export function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-[54px] w-full items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 px-4 md:px-8 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex h-[54px] w-full items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 px-4 md:px-8 backdrop-blur-md print:hidden">
       {/* Left: Mobile Toggle & Active Period */}
       <div className="flex items-center gap-4">
         <button

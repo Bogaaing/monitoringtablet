@@ -96,27 +96,17 @@ export function QRCodeCard({ tablet, onRegenerate }: QRCodeCardProps) {
             {/* Printable Sticker Label Container */}
             <div
               id={containerId}
-              className="p-6 bg-white rounded-2xl border-2 border-slate-900 shadow-md text-slate-900 flex flex-col items-center justify-center text-center space-y-4 min-w-[300px] max-w-[340px]"
+              className="p-6 bg-white rounded-2xl border-2 border-slate-900 text-slate-900 flex flex-col items-center justify-center text-center space-y-4 w-[300px] sm:w-[320px] shadow-sm select-none"
             >
-              {/* Header: [ PROPAN LOGO ] PT. PROPAN RAYA ICC */}
-              <div className="flex items-center justify-center gap-2.5 border-b-2 border-slate-200 pb-3 w-full">
-                <PropanLogo height={32} className="h-8 w-auto shrink-0" color="#2E2A7B" />
-                <span
-                  className="font-bold text-[#2E2A7B] tracking-wide text-center whitespace-nowrap"
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    color: "#2E2A7B",
-                    letterSpacing: "0.03em",
-                    lineHeight: "1.2",
-                  }}
-                >
+              {/* Header: PT. PROPAN RAYA ICC */}
+              <div className="w-full border-b border-slate-200 pb-3 text-center">
+                <span className="font-extrabold text-[16px] sm:text-[17px] text-[#4F46E5] tracking-wider uppercase block leading-tight">
                   PT. PROPAN RAYA ICC
                 </span>
               </div>
 
-              {/* Render canvas for image export & vector SVG */}
-              <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-sm">
+              {/* Render canvas for image export & vector SVG with quiet-zone */}
+              <div className="p-2 bg-white rounded-xl border border-slate-100 flex items-center justify-center">
                 <QRCodeCanvas
                   value={qrPayload}
                   size={160}
@@ -126,17 +116,17 @@ export function QRCodeCard({ tablet, onRegenerate }: QRCodeCardProps) {
               </div>
 
               {/* Tablet Info Metadata */}
-              <div className="space-y-1 w-full pt-3 border-t-2 border-slate-200 text-center">
-                <div className="font-mono text-xl font-black text-[#2E2A7B] tracking-wider uppercase">
-                  {tablet.qr_code || "TB 04"}
+              <div className="space-y-1.5 w-full pt-3 border-t border-slate-200 text-center">
+                <div className="font-mono text-xl font-black text-[#4F46E5] tracking-wider uppercase">
+                  {tablet.qr_code || "TB 10"}
                 </div>
-                <div className="text-sm font-bold text-slate-800 truncate">
+                <div className="text-xs font-bold text-slate-800 truncate px-2">
                   {tablet.model ? (tablet.brand ? `${tablet.model} (${tablet.brand})` : tablet.model) : "Exproof (P9000)"}
                 </div>
-                <div className="text-xs font-mono text-slate-600 font-medium">
-                  S/N: {tablet.serial_number || "3559.2810.1240.862"}
+                <div className="text-[11px] font-mono text-slate-600 font-medium truncate px-2">
+                  S/N: {tablet.serial_number || "3559.2810.1241.290"}
                 </div>
-                <div className="text-xs font-semibold text-slate-700 truncate">
+                <div className="text-xs font-semibold text-slate-700 truncate px-2">
                   Loc: {tablet.location?.name || "Politur"}
                 </div>
               </div>
