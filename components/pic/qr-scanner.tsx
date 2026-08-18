@@ -517,7 +517,7 @@ export function QRScanner({ onScanSuccess, currentUser }: QRScannerProps) {
             </label>
             <Input
               type="text"
-              placeholder="Contoh: QR-TAB-001"
+              placeholder="Contoh: TB 01"
               value={manualInput}
               onChange={(e) => setManualInput(e.target.value)}
               className="font-mono text-base tracking-wider text-indigo-600 font-bold h-12 rounded-xl border-slate-200 dark:border-slate-700"
@@ -531,25 +531,6 @@ export function QRScanner({ onScanSuccess, currentUser }: QRScannerProps) {
           >
             Proses &amp; Periksa Tablet
           </Button>
-
-          {/* Sample shortcut pills */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-            <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
-              Contoh Kode Tablet Demo:
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {["QR-TAB-001", "QR-TAB-002", "QR-TAB-003"].map((code) => (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => handleCodeDetected(code)}
-                  className="px-2.5 py-1 text-xs font-mono bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-100 dark:border-indigo-900/50 hover:bg-indigo-100 font-bold transition-all"
-                >
-                  {code}
-                </button>
-              ))}
-            </div>
-          </div>
         </form>
       )}
 
