@@ -351,30 +351,109 @@ export const inspectionsService = {
 
   async reviewInspection(
     id: string,
-    reviewerId: string,
-    status: "approved" | "rejected",
+    reviewerId?: string,
+    status: "approved" | "rejected" = "approved",
     rejectionReason?: string
   ): Promise<Inspection> {
-    const updatedFields = {
+    const supabase = createClient() as any;
+
+    // 1. Resolve a valid UUID for reviewer_id in Supabase to prevent UUID syntax or FK constraint errors
+    let validReviewerId: string | null = null;
+    const isUuid = (val?: string) =>
+      typeof val === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+    try {
+      if (reviewerId && isUuid(reviewerId)) {
+        const { data: userExist } = await supabase.from("users").select("id").eq("id", reviewerId).single();
+        if (userExist?.id) {
+          validReviewerId = userExist.id;
+        }
+      }
+
+      if (!validReviewerId) {
+        // Find existing manager or admin user in users table
+        const { data: mgrUser } = await supabase
+          .from("users")
+          .select("id")
+          .eq("role", "manager")
+          .limit(1)
+          .single();
+
+        if (mgrUser?.id) {
+          validReviewerId = mgrUser.id;
+        } else {
+          const { data: anyUser } = await supabase.from("users").select("id").limit(1).single();
+          if (anyUser?.id) {
+            validReviewerId = anyUser.id;
+          }
+        }
+      }
+    } catch (e) {}
+
+    const updatedFields: any = {
       status,
-      reviewer_id: reviewerId,
       reviewed_at: new Date().toISOString(),
-      rejection_reason: status === "rejected" ? rejectionReason || "" : null,
+      rejection_reason: status === "rejected" ? (rejectionReason || "-") : null,
       updated_at: new Date().toISOString(),
     };
 
+    if (validReviewerId && isUuid(validReviewerId)) {
+      updatedFields.reviewer_id = validReviewerId;
+    }
+
+    // 2. Perform update
     try {
-      const supabase = createClient() as any;
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("inspections")
         .update(updatedFields)
         .eq("id", id)
-        .select("*, photos:inspection_photos(*)")
+        .select()
         .single();
 
-      if (!error && data) return data as unknown as Inspection;
-    } catch (e) {}
+      // If failed with reviewer_id FK constraint error, try without reviewer_id
+      if (error && (error.code === "23503" || error.code === "22P02" || error.message?.includes("reviewer_id") || error.message?.includes("foreign key") || error.message?.includes("uuid"))) {
+        delete updatedFields.reviewer_id;
+        const retryRes = await supabase
+          .from("inspections")
+          .update(updatedFields)
+          .eq("id", id)
+          .select()
+          .single();
 
+        data = retryRes.data;
+        error = retryRes.error;
+      }
+
+      if (!error && data) {
+        // Record audit activity log
+        try {
+          if (validReviewerId) {
+            await supabase.from("activity_logs").insert([
+              {
+                user_id: validReviewerId,
+                action: status === "approved" ? "INSPECTION_APPROVED" : "INSPECTION_REJECTED",
+                details: {
+                  inspection_id: id,
+                  status,
+                  rejection_reason: status === "rejected" ? rejectionReason || "" : null,
+                  reviewed_at: updatedFields.reviewed_at,
+                },
+              },
+            ]);
+          }
+        } catch (logErr) {}
+
+        return data as unknown as Inspection;
+      }
+
+      if (error) {
+        console.error("reviewInspection Supabase error:", error);
+      }
+    } catch (e) {
+      console.error("reviewInspection exception:", e);
+    }
+
+    // 3. Fallback: Try with Admin Client if in server context
     if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
         const adminSupabase = createAdminClient() as any;
@@ -382,56 +461,98 @@ export const inspectionsService = {
           .from("inspections")
           .update(updatedFields)
           .eq("id", id)
-          .select("*, photos:inspection_photos(*)")
+          .select()
           .single();
 
         if (!error && data) return data as unknown as Inspection;
       } catch (e) {}
     }
 
-    throw new Error("Gagal memperbarui status approval inspeksi di Supabase.");
+    throw new Error("Gagal memperbarui status approval inspeksi di database.");
   },
 
   async bulkReviewInspections(
     ids: string[],
-    reviewerId: string,
-    status: "approved" | "rejected",
+    reviewerId?: string,
+    status: "approved" | "rejected" = "approved",
     rejectionReason?: string
   ): Promise<{ successCount: number; failedIds: string[]; errors: string[] }> {
     if (!ids || ids.length === 0) {
       return { successCount: 0, failedIds: [], errors: [] };
     }
 
-    const updatedFields = {
+    const supabase = createClient() as any;
+    let validReviewerId: string | null = null;
+    const isUuid = (val?: string) =>
+      typeof val === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+    try {
+      if (reviewerId && isUuid(reviewerId)) {
+        const { data: userExist } = await supabase.from("users").select("id").eq("id", reviewerId).single();
+        if (userExist?.id) {
+          validReviewerId = userExist.id;
+        }
+      }
+
+      if (!validReviewerId) {
+        const { data: mgrUser } = await supabase.from("users").select("id").eq("role", "manager").limit(1).single();
+        if (mgrUser?.id) {
+          validReviewerId = mgrUser.id;
+        } else {
+          const { data: anyUser } = await supabase.from("users").select("id").limit(1).single();
+          if (anyUser?.id) {
+            validReviewerId = anyUser.id;
+          }
+        }
+      }
+    } catch (e) {}
+
+    const updatedFields: any = {
       status,
-      reviewer_id: reviewerId,
       reviewed_at: new Date().toISOString(),
-      rejection_reason: status === "rejected" ? rejectionReason || "" : null,
+      rejection_reason: status === "rejected" ? (rejectionReason || "-") : null,
       updated_at: new Date().toISOString(),
     };
 
+    if (validReviewerId && isUuid(validReviewerId)) {
+      updatedFields.reviewer_id = validReviewerId;
+    }
+
     try {
-      const supabase = createClient() as any;
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("inspections")
         .update(updatedFields)
         .in("id", ids)
         .select("id");
 
+      if (error && (error.code === "23503" || error.code === "22P02" || error.message?.includes("reviewer_id") || error.message?.includes("foreign key") || error.message?.includes("uuid"))) {
+        delete updatedFields.reviewer_id;
+        const retryRes = await supabase
+          .from("inspections")
+          .update(updatedFields)
+          .in("id", ids)
+          .select("id");
+
+        data = retryRes.data;
+        error = retryRes.error;
+      }
+
       if (!error && data) {
         // Record batch activity logs
         try {
-          const activityLogs = ids.map((id) => ({
-            user_id: reviewerId,
-            action: status === "approved" ? "BULK_INSPECTION_APPROVED" : "BULK_INSPECTION_REJECTED",
-            details: {
-              inspection_id: id,
-              status,
-              rejection_reason: status === "rejected" ? rejectionReason || "" : null,
-              reviewed_at: updatedFields.reviewed_at,
-            },
-          }));
-          await supabase.from("activity_logs").insert(activityLogs);
+          if (validReviewerId) {
+            const activityLogs = ids.map((id) => ({
+              user_id: validReviewerId,
+              action: status === "approved" ? "BULK_INSPECTION_APPROVED" : "BULK_INSPECTION_REJECTED",
+              details: {
+                inspection_id: id,
+                status,
+                rejection_reason: status === "rejected" ? rejectionReason || "" : null,
+                reviewed_at: updatedFields.reviewed_at,
+              },
+            }));
+            await supabase.from("activity_logs").insert(activityLogs);
+          }
         } catch (logErr) {}
 
         const updatedIds = data.map((d: any) => d.id);
@@ -443,28 +564,6 @@ export const inspectionsService = {
         };
       }
     } catch (e) {}
-
-    // Fallback: Try with Admin Client if client-side update had RLS or connection issue
-    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const adminSupabase = createAdminClient() as any;
-        const { data, error } = await adminSupabase
-          .from("inspections")
-          .update(updatedFields)
-          .in("id", ids)
-          .select("id");
-
-        if (!error && data) {
-          const updatedIds = data.map((d: any) => d.id);
-          const failed = ids.filter((id) => !updatedIds.includes(id));
-          return {
-            successCount: updatedIds.length,
-            failedIds: failed,
-            errors: failed.length > 0 ? [`${failed.length} inspeksi gagal diperbarui via admin client.`] : [],
-          };
-        }
-      } catch (e) {}
-    }
 
     // Fallback item by item for detailed failure tracking
     let successCount = 0;

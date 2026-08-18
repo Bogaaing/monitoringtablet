@@ -70,10 +70,12 @@ export default function ManagerApprovalsPage() {
     initUser();
   }, []);
 
-  // Determine if user has Manager role permissions (Strict scoping)
+  // Determine if user has Manager or Admin role permissions (Strict scoping)
   const isManager =
     currentUser?.role === "manager" ||
-    (typeof document !== "undefined" && document.cookie.includes("demo_role=manager"));
+    currentUser?.role === "admin" ||
+    (typeof document !== "undefined" &&
+      (document.cookie.includes("demo_role=manager") || document.cookie.includes("demo_role=admin")));
 
   const showToast = (text: string, type: "success" | "error" | "info" = "success") => {
     setToastMessage({ text, type });
@@ -168,13 +170,15 @@ export default function ManagerApprovalsPage() {
   const handleApprove = async (inspectionId: string) => {
     setActionLoading(true);
     try {
-      const reviewerId = currentUser?.id || "30000000-0000-0000-0000-000000000003";
+      const reviewerId = currentUser?.id;
       await inspectionsService.reviewInspection(inspectionId, reviewerId, "approved");
       setSelectedInspection(null);
+      setSelectedIds((prev) => prev.filter((id) => id !== inspectionId));
       showToast("✓ 1 inspeksi berhasil disetujui.", "success");
-      fetchApprovalData();
-    } catch (e) {
-      showToast("Gagal menyetujui inspeksi.", "error");
+      await fetchApprovalData();
+    } catch (e: any) {
+      console.error("handleApprove error:", e);
+      showToast(e?.message || "Gagal menyetujui inspeksi.", "error");
     } finally {
       setActionLoading(false);
     }
@@ -188,11 +192,12 @@ export default function ManagerApprovalsPage() {
       return;
     }
 
+    const targetInspectionId = selectedInspection.id;
     setActionLoading(true);
     try {
-      const reviewerId = currentUser?.id || "30000000-0000-0000-0000-000000000003";
+      const reviewerId = currentUser?.id;
       await inspectionsService.reviewInspection(
-        selectedInspection.id,
+        targetInspectionId,
         reviewerId,
         "rejected",
         rejectionReason.trim()
@@ -200,10 +205,12 @@ export default function ManagerApprovalsPage() {
       setShowRejectModal(false);
       setRejectionReason("");
       setSelectedInspection(null);
+      setSelectedIds((prev) => prev.filter((id) => id !== targetInspectionId));
       showToast("✓ 1 inspeksi berhasil ditolak.", "info");
-      fetchApprovalData();
-    } catch (e) {
-      showToast("Gagal menolak inspeksi.", "error");
+      await fetchApprovalData();
+    } catch (e: any) {
+      console.error("handleRejectSubmit error:", e);
+      showToast(e?.message || "Gagal menolak inspeksi.", "error");
     } finally {
       setActionLoading(false);
     }
@@ -788,7 +795,7 @@ export default function ManagerApprovalsPage() {
 
       {/* Single Rejection Reason Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in zoom-in-95">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in zoom-in-95">
           <form
             onSubmit={handleRejectSubmit}
             className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4"
