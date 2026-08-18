@@ -5,7 +5,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { tabletsService } from "@/services/tablets.service";
-import { Tablet } from "@/types";
+import { Tablet, User } from "@/types";
 import {
   QrCode,
   Camera,
@@ -270,9 +270,10 @@ function ScannerOverlay({
 interface QRScannerProps {
   onScanSuccess: (qrCode: string, tabletData?: Tablet) => void;
   isScanning?: boolean;
+  currentUser?: User | null;
 }
 
-export function QRScanner({ onScanSuccess }: QRScannerProps) {
+export function QRScanner({ onScanSuccess, currentUser }: QRScannerProps) {
   const [mode, setMode] = useState<"camera" | "manual">("camera");
   const [manualInput, setManualInput] = useState("");
   const [isTorchOn, setIsTorchOn] = useState(false);
@@ -362,19 +363,33 @@ export function QRScanner({ onScanSuccess }: QRScannerProps) {
       const remainingDelay = Math.max(0, 800 - elapsed);
 
       setTimeout(() => {
-        if (tablet) {
-          setDetectedTablet(tablet);
-          setScanStatus("success");
-        } else {
+        if (!tablet) {
           setErrorMessage(`QR Code "${code}" tidak terdaftar dalam sistem inventaris.`);
           setScanStatus("error");
+          return;
         }
+
+        // Strict Location Authorization Check for PIC
+        if (currentUser?.role === "pic" && currentUser.location_id) {
+          if (tablet.location_id && tablet.location_id !== currentUser.location_id) {
+            const tabletLocName = tablet.location?.name || "lokasi lain";
+            const myLocName = currentUser.location?.name || "lokasi penugasan Anda";
+            setErrorMessage(
+              `Akses Ditolak: Tablet "${tablet.qr_code}" berada di "${tabletLocName}". Anda hanya ditugaskan untuk menginspeksi di "${myLocName}".`
+            );
+            setScanStatus("error");
+            return;
+          }
+        }
+
+        setDetectedTablet(tablet);
+        setScanStatus("success");
       }, remainingDelay);
     } catch (e: any) {
       setErrorMessage(e?.message || `QR Code "${code}" tidak dapat diproses.`);
       setScanStatus("error");
     }
-  }, [scanStatus]);
+  }, [scanStatus, currentUser]);
 
   // ── Camera controls ───────────────────────────────────────────────
   const toggleTorch = async () => {

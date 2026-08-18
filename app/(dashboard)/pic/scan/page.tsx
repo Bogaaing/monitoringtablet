@@ -20,11 +20,13 @@ import {
   RefreshCw,
   History,
   LayoutDashboard,
+  MapPin,
+  ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 
 export default function PicScanPage() {
-  const [step, setStep] = useState<"scan" | "validating" | "form" | "already_inspected" | "success">("scan");
+  const [step, setStep] = useState<"scan" | "validating" | "form" | "already_inspected" | "unauthorized_location" | "success">("scan");
   const [scannedTablet, setScannedTablet] = useState<Tablet | null>(null);
   const [activePeriod, setActivePeriod] = useState<InspectionPeriod | null>(null);
   const [existingInspection, setExistingInspection] = useState<Inspection | null>(null);
@@ -68,7 +70,17 @@ export default function PicScanPage() {
 
       setScannedTablet(tablet);
 
-      // 2. Fetch active period
+      // 2. Strict Location Authorization Check for PIC
+      const user = currentUser || (await authService.getCurrentProfile());
+      if (user?.role === "pic" && user.location_id) {
+        if (tablet.location_id && tablet.location_id !== user.location_id) {
+          setStep("unauthorized_location");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 3. Fetch active period
       const period = activePeriod || (await periodsService.getActivePeriod());
       if (!period) {
         setErrorMessage("Tidak ada Periode Inspeksi Aktif saat ini.");
@@ -77,7 +89,7 @@ export default function PicScanPage() {
         return;
       }
 
-      // 3. Validate duplicate inspection
+      // 4. Validate duplicate inspection
       const existing = await inspectionsService.checkTabletInspectedInPeriod(tablet.id, period.id);
       if (existing) {
         setExistingInspection(existing);
@@ -145,7 +157,7 @@ export default function PicScanPage() {
       {/* Step 1: Enterprise Camera / Manual QR Scanner */}
       {step === "scan" && (
         <div className="space-y-4">
-          <QRScanner onScanSuccess={handleScanSuccess} />
+          <QRScanner onScanSuccess={handleScanSuccess} currentUser={currentUser} />
         </div>
       )}
 
@@ -158,6 +170,60 @@ export default function PicScanPage() {
               Memvalidasi Kode QR & Memeriksa Data Tablet...
             </h3>
             <p className="text-xs text-slate-500">Mohon tunggu sebentar.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 2.5: Unauthorized Location Warning Card */}
+      {step === "unauthorized_location" && scannedTablet && (
+        <Card className="border-rose-200 dark:border-rose-900 shadow-xl overflow-hidden rounded-3xl animate-in zoom-in-95">
+          <CardHeader className="bg-rose-50 dark:bg-rose-950/40 border-b border-rose-100 dark:border-rose-900/50">
+            <CardTitle className="text-base text-rose-700 dark:text-rose-300 flex items-center gap-2 font-black">
+              <AlertTriangle className="h-5 w-5 text-rose-600" />
+              <span>Akses Ditolak: Bukan Tablet Lokasi Anda</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              Unit tablet <span className="font-mono font-bold text-indigo-600">{scannedTablet.qr_code}</span> ({scannedTablet.brand} {scannedTablet.model}) terdaftar di lokasi yang berbeda dengan penugasan akun PIC Anda.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
+              <div className="space-y-1">
+                <span className="text-slate-500 block font-semibold">Lokasi Unit Tablet:</span>
+                <span className="font-bold text-rose-600 dark:text-rose-400 text-sm flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4 shrink-0" />
+                  <span>{scannedTablet.location?.name || "Lokasi Lain"}</span>
+                </span>
+              </div>
+              <div className="space-y-1">
+                <span className="text-slate-500 block font-semibold">Lokasi Penugasan Anda:</span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400 text-sm flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4 shrink-0" />
+                  <span>{currentUser?.location?.name || "Area Anda"}</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-200">
+              Sesuai kebijakan operasional, Kepala Regu (PIC) hanya berwenang melakukan inspeksi rutin pada tablet yang terdaftar di lokasi penugasannya sendiri.
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                onClick={() => setStep("scan")}
+                className="flex-1 bg-[#473bf0] hover:bg-indigo-700 font-extrabold gap-2 rounded-xl h-11"
+              >
+                <QrCode className="h-4 w-4" />
+                <span>Scan Tablet Lain</span>
+              </Button>
+              <Link href="/pic/tasks" className="flex-1">
+                <Button variant="outline" className="w-full gap-2 font-bold rounded-xl h-11 border-slate-300">
+                  <ClipboardList className="h-4 w-4" />
+                  <span>Lihat Daftar Tugas Saya</span>
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       )}

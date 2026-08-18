@@ -153,17 +153,11 @@ export default function PicTasksPage() {
     try {
       const locationId = currentUser.location_id || undefined;
 
-      // Load tablets at PIC's location (fallback to all tablets if none found at assigned location)
-      let tabletsRes = await tabletsService.getTablets({
+      // Load tablets strictly at PIC's assigned location
+      const tabletsRes = await tabletsService.getTablets({
         locationId,
         limit: 500,
       });
-
-      if ((!tabletsRes.data || tabletsRes.data.length === 0) && locationId) {
-        tabletsRes = await tabletsService.getTablets({
-          limit: 500,
-        });
-      }
       const tablets = tabletsRes.data;
 
       // Load inspections for active period
