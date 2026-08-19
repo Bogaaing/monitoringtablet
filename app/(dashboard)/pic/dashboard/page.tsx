@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { periodsService } from "@/services/periods.service";
 import { authService } from "@/services/auth.service";
 import { tabletsService } from "@/services/tablets.service";
@@ -12,14 +11,12 @@ import { User, InspectionPeriod } from "@/types";
 import { InstallAppCard } from "@/components/pic/install-app-card";
 import {
   QrCode,
-  ArrowRight,
   Calendar,
   ClipboardList,
   Clock,
   BarChart3,
   CheckCircle2,
   XCircle,
-  ChevronRight,
   Sparkles,
   Activity,
 } from "lucide-react";
@@ -89,46 +86,9 @@ export default function PicDashboardPage() {
       {/* ── 1.5 CUSTOM INSTALL APP CARD (PWA) ── */}
       <InstallAppCard />
 
-      {/* ── 2. PRIMARY ACTION: SCAN QR BUTTON ── */}
-      <Link href="/pic/scan" className="block">
-        <Button className="w-full min-h-[56px] bg-[#473bf0] hover:bg-indigo-700 active:scale-[0.98] text-white font-extrabold py-3.5 px-4 rounded-2xl shadow-xl shadow-indigo-500/25 flex items-center justify-between transition-all duration-200 border border-indigo-400/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/20 text-white backdrop-blur-sm shrink-0">
-              <QrCode className="w-6 h-6" />
-            </div>
-            <div className="text-left">
-              <span className="text-sm block font-black leading-none">Scan QR Code Tablet</span>
-              <span className="text-[11px] font-normal text-indigo-100 mt-1 block">
-                Mulai Inspeksi Fisik
-              </span>
-            </div>
-          </div>
-          <ArrowRight className="w-5 h-5 text-indigo-200 shrink-0" />
-        </Button>
-      </Link>
-
-      {/* ── 3. PROGRES INSPEKSI BULANAN CARD ── */}
+      {/* ── 2. PROGRES INSPEKSI BULANAN CARD ── */}
       <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
         <CardContent className="p-4 space-y-3.5">
-          {/* Header Row */}
-          <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
-            <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>Progres Inspeksi Bulanan</span>
-              </h3>
-              <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
-                Periode: <strong className="text-indigo-600 dark:text-indigo-400">{activePeriod?.name || "Agustus 2026"}</strong>
-              </span>
-            </div>
-
-            <Link href="/pic/tasks">
-              <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 shrink-0 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
-                Lihat Detail <ChevronRight className="w-3.5 h-3.5" />
-              </span>
-            </Link>
-          </div>
-
           {/* Center Circular Progress + 5 Color-Coded Stats */}
           <div className="flex items-center gap-3">
             {/* Circular Progress Gauge (Blue/Indigo) */}

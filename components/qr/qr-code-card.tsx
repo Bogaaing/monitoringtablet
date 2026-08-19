@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { QRCodeSVG, QRCodeCanvas } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 import { Tablet } from "@/types";
-import { downloadQrCanvas, printQrSticker } from "@/lib/qr-utils";
+import { downloadTabletSticker, printQrSticker } from "@/lib/qr-utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { QrCode, Download, Printer, RefreshCw, Eye, EyeOff, CheckCircle2 } from "lucide-react";
@@ -30,7 +30,7 @@ export function QRCodeCard({ tablet, onRegenerate }: QRCodeCardProps) {
   });
 
   const handleDownload = () => {
-    downloadQrCanvas(containerId, `${tablet.qr_code}_${tablet.serial_number}.png`);
+    downloadTabletSticker(tablet, `${tablet.qr_code || "tablet"}_${tablet.serial_number || "qr"}.png`);
   };
 
   const handlePrint = () => {
@@ -92,41 +92,41 @@ export function QRCodeCard({ tablet, onRegenerate }: QRCodeCardProps) {
         )}
 
         {showQr ? (
-          <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="flex flex-col items-center justify-center py-2">
             {/* Printable Sticker Label Container */}
             <div
               id={containerId}
-              className="p-6 bg-white rounded-2xl border-2 border-slate-900 text-slate-900 flex flex-col items-center justify-center text-center space-y-4 w-[300px] sm:w-[320px] shadow-sm select-none"
+              className="p-6 pb-8 bg-white rounded-3xl border-4 border-slate-900 text-slate-900 flex flex-col items-center justify-center text-center space-y-3.5 w-[300px] sm:w-[320px] shadow-md select-none"
             >
               {/* Header: PT. PROPAN RAYA ICC */}
-              <div className="w-full border-b border-slate-200 pb-3 text-center">
+              <div className="w-full border-b-2 border-slate-200 pb-2.5 text-center">
                 <span className="font-extrabold text-[16px] sm:text-[17px] text-[#4F46E5] tracking-wider uppercase block leading-tight">
                   PT. PROPAN RAYA ICC
                 </span>
               </div>
 
               {/* Render canvas for image export & vector SVG with quiet-zone */}
-              <div className="p-2 bg-white rounded-xl border border-slate-100 flex items-center justify-center">
+              <div className="p-2.5 bg-white rounded-2xl border border-slate-100 flex items-center justify-center shadow-2xs">
                 <QRCodeCanvas
                   value={qrPayload}
-                  size={160}
+                  size={165}
                   level="H"
                   includeMargin={true}
                 />
               </div>
 
               {/* Tablet Info Metadata */}
-              <div className="space-y-1.5 w-full pt-3 border-t border-slate-200 text-center">
-                <div className="font-mono text-xl font-black text-[#4F46E5] tracking-wider uppercase">
+              <div className="space-y-1 w-full pt-2.5 border-t-2 border-slate-200 text-center">
+                <div className="font-mono text-2xl font-black text-[#4F46E5] tracking-wider uppercase leading-none py-1">
                   {tablet.qr_code || "TB 10"}
                 </div>
-                <div className="text-xs font-bold text-slate-800 truncate px-2">
+                <div className="text-xs font-bold text-slate-800 leading-snug">
                   {tablet.model ? (tablet.brand ? `${tablet.model} (${tablet.brand})` : tablet.model) : "Exproof (P9000)"}
                 </div>
-                <div className="text-[11px] font-mono text-slate-600 font-medium truncate px-2">
+                <div className="text-[11px] font-mono text-slate-600 font-medium leading-snug">
                   S/N: {tablet.serial_number || "3559.2810.1241.290"}
                 </div>
-                <div className="text-xs font-semibold text-slate-700 truncate px-2">
+                <div className="text-xs font-semibold text-slate-700 leading-snug">
                   Loc: {tablet.location?.name || "Politur"}
                 </div>
               </div>

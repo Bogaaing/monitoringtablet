@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatGradientCard } from "@/components/dashboard/stat-gradient-card";
-import { GlassCard } from "@/components/dashboard/glass-card";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { dashboardService, AdminDashboardStats } from "@/services/dashboard.service";
 import {
   BarChart,
@@ -13,10 +14,10 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 import {
   Tablet,
@@ -25,9 +26,14 @@ import {
   AlertTriangle,
   Activity,
   Calendar,
-  Zap,
+  CheckCircle2,
+  Clock,
+  XCircle,
   ChevronRight,
   Shield,
+  ArrowRight,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -36,142 +42,258 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
+  const fetchStats = () => {
+    setLoading(true);
     dashboardService.getAdminStats().then((res) => {
       setStats(res);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    fetchStats();
   }, []);
 
+  const activeCount = (stats?.totalTablets || 0) - (stats?.damagedTablets || 0);
+  const damagedCount = stats?.damagedTablets || 0;
+
   const deviceDistributionData = [
-    { name: "Aktif (Active)", value: (stats?.totalTablets || 0) - (stats?.damagedTablets || 0), color: "#10b981" },
-    { name: "Perlu Servis", value: stats?.damagedTablets || 0, color: "#f59e0b" },
+    { name: "Aktif Siap Pakai", value: Math.max(0, activeCount), color: "#10B981" },
+    { name: "Perlu Servis / Rusak", value: damagedCount, color: "#F59E0B" },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Top Page Header */}
-      <PageHeader
-        title="Dashboard System Overview"
-        description="Ringkasan real-time inventaris tablet, sebaran lokasi operasional, dan status progres pengujian bulanan."
-      />
-
-      {/* 5 KPI Summary Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatGradientCard
-          title="Total Tablet"
-          value={loading ? "..." : stats?.totalTablets || 0}
-          description="Unit terdaftar"
-          icon={Tablet}
-          gradient="indigo"
-          badgeText="Inventaris"
+      {/* ── Top Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageHeader
+          title="Dashboard System Overview"
+          description="Monitoring real-time inventaris tablet, progres pengujian bulanan, dan status operasional perangkat."
         />
-
-        <StatGradientCard
-          title="Total Users"
-          value={loading ? "..." : stats?.totalUsers || 0}
-          description="Akun terdaftar"
-          icon={Users}
-          gradient="sky"
-          badgeText="Pengguna"
-        />
-
-        <StatGradientCard
-          title="Total Lokasi"
-          value={loading ? "..." : stats?.totalLocations || 0}
-          description="Area operasional"
-          icon={MapPin}
-          gradient="emerald"
-          badgeText="Area"
-        />
-
-        <StatGradientCard
-          title="Progres Inspeksi"
-          value={loading ? "..." : `${stats?.progressPercentage || 0}%`}
-          description={stats?.activePeriodName || "Periode Aktif"}
-          icon={Activity}
-          gradient="violet"
-          badgeText="Periode Ini"
-        />
-
-        <StatGradientCard
-          title="Tablet Rusak"
-          value={loading ? "..." : stats?.damagedTablets || 0}
-          description="Perlu maintenance"
-          icon={AlertTriangle}
-          gradient="amber"
-          badgeText="Perhatian"
-        />
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchStats}
+            disabled={loading}
+            className="gap-1.5 text-xs font-semibold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-indigo-600" : "text-slate-500"}`} />
+            <span>Segarkan</span>
+          </Button>
+          <div className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/60 text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>{stats?.activePeriodName || "Agustus 2026"}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Visualizations Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Inspection Progress Card */}
-        <GlassCard className="lg:col-span-2 p-6" glowColor="indigo">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Activity className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                <span>Progres Inspeksi & Aktivitas Perangkat</span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Perbandingan unit terinspeksi vs total perangkat terdaftar
-              </p>
+      {/* ── 4 Primary KPI Summary Cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Tablet Card */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Total Tablet
+            </span>
+            <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+              <Tablet className="h-5 w-5" />
             </div>
-            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-              {stats?.progressPercentage || 0}%
+          </div>
+          <div className="flex items-baseline justify-between">
+            <div className="text-3xl font-black text-slate-900 dark:text-slate-100 font-mono">
+              {loading ? "..." : stats?.totalTablets || 0}
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              {stats?.activeTablets ?? activeCount} Aktif
             </span>
           </div>
+          <div className="text-xs text-slate-500 font-medium">
+            {stats?.damagedTablets || 0} unit dalam perbaikan / servis
+          </div>
+        </div>
 
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-4 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
-                <div
-                  className="bg-indigo-600 h-full rounded-full transition-all duration-700"
-                  style={{ width: `${stats?.progressPercentage || 0}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
-                <span>{stats?.completedInspections || 0} Unit Selesai</span>
-                <span>{stats?.totalTablets || 0} Total Unit</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center">
-              <div>
-                <span className="text-xs text-slate-500 block font-medium">Total Tablet</span>
-                <span className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
-                  {stats?.totalTablets || 0}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-slate-500 block font-medium">Sudah Diinspeksi</span>
-                <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                  {stats?.completedInspections || 0}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-slate-500 block font-medium">Perlu Perbaikan</span>
-                <span className="text-xl font-extrabold text-amber-600 dark:text-amber-400">
-                  {stats?.damagedTablets || 0}
-                </span>
-              </div>
+        {/* Progres Inspeksi Card */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Progres Inspeksi
+            </span>
+            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
+              <Activity className="h-5 w-5" />
             </div>
           </div>
-        </GlassCard>
+          <div className="flex items-baseline justify-between">
+            <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+              {loading ? "..." : `${stats?.progressPercentage || 0}%`}
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+              {stats?.completedInspections || 0} / {stats?.totalTablets || 0} Selesai
+            </span>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div
+              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+              style={{ width: `${stats?.progressPercentage || 0}%` }}
+            />
+          </div>
+        </div>
 
-        {/* Device Status Donut Chart */}
-        <GlassCard className="p-6 flex flex-col justify-between" glowColor="emerald">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-4 mb-2">
+        {/* Total Lokasi Operasional */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Lokasi / Area
+            </span>
+            <div className="p-2.5 rounded-xl bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400">
+              <MapPin className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <div className="text-3xl font-black text-slate-900 dark:text-slate-100 font-mono">
+              {loading ? "..." : stats?.totalLocations || 0}
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+              Area Gudang
+            </span>
+          </div>
+          <div className="text-xs text-slate-500 font-medium">
+            Tersebar di seluruh pabrik & plant
+          </div>
+        </div>
+
+        {/* Total Pengguna Terdaftar */}
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Pengguna Sistem
+            </span>
+            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400">
+              <Users className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <div className="text-3xl font-black text-slate-900 dark:text-slate-100 font-mono">
+              {loading ? "..." : stats?.totalUsers || 0}
+            </div>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              Akun Aktif
+            </span>
+          </div>
+          <div className="text-xs text-slate-500 font-medium">
+            Admin, Manager, dan PIC Regu
+          </div>
+        </div>
+      </div>
+
+      {/* ── Visualizations Grid: 2 Columns ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Location Progress Bar Chart (2 columns) */}
+        <div className="lg:col-span-2 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <MapPin className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Progres Inspeksi per Lokasi Area</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Perbandingan jumlah tablet yang telah disetujui vs menunggu approval per lokasi
+              </p>
+            </div>
+            <Link href="/reports">
+              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+                Laporan Lengkap <ChevronRight className="w-3.5 h-3.5" />
+              </span>
+            </Link>
+          </div>
+
+          <div className="h-[260px] w-full pt-2">
+            {!mounted || loading ? (
+              <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+                Memuat visualisasi data...
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={stats?.locationProgress || []}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
+                  <XAxis
+                    dataKey="locationName"
+                    tick={{ fontSize: 11, fill: "#64748B" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#64748B" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      color: "#FFFFFF",
+                      borderRadius: "12px",
+                      border: "none",
+                      boxShadow: "0 10px 25px -5px rgba(0,0,0,0.3)",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Bar
+                    dataKey="completed"
+                    name="Disetujui (Approved)"
+                    fill="#10B981"
+                    radius={[6, 6, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="pending"
+                    name="Menunggu Approval"
+                    fill="#F59E0B"
+                    radius={[6, 6, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Mini Legend & Summary Pills */}
+          <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-emerald-500" />
+              <span className="text-slate-600 dark:text-slate-400 font-semibold">
+                Disetujui: <strong className="text-slate-900 dark:text-slate-100">{stats?.completedInspections || 0} Unit</strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-amber-500" />
+              <span className="text-slate-600 dark:text-slate-400 font-semibold">
+                Menunggu: <strong className="text-slate-900 dark:text-slate-100">{stats?.pendingInspections || 0} Unit</strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-rose-500" />
+              <span className="text-slate-600 dark:text-slate-400 font-semibold">
+                Perlu Perbaikan: <strong className="text-slate-900 dark:text-slate-100">{stats?.rejectedInspections || 0} Unit</strong>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Device Status Donut Chart (1 column) */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 flex flex-col justify-between">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Zap className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              <span>Kelayakan Perangkat</span>
+              <Shield className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Kelayakan Fisik Tablet</span>
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Proporsi kondisi fisik tablet</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Proporsi kesiapan operasional perangkat
+            </p>
           </div>
 
-          <div className="h-[220px] flex items-center justify-center">
+          <div className="h-[220px] flex items-center justify-center relative">
             {!mounted || loading ? (
               <div className="text-slate-400 text-xs">Memuat grafik...</div>
             ) : (
@@ -183,7 +305,7 @@ export default function AdminDashboardPage() {
                     cy="50%"
                     innerRadius={55}
                     outerRadius={80}
-                    paddingAngle={5}
+                    paddingAngle={4}
                     dataKey="value"
                   >
                     {deviceDistributionData.map((entry, index) => (
@@ -196,6 +318,7 @@ export default function AdminDashboardPage() {
                       color: "#fff",
                       borderRadius: "12px",
                       border: "none",
+                      fontSize: "12px",
                     }}
                   />
                   <Legend />
@@ -203,86 +326,160 @@ export default function AdminDashboardPage() {
               </ResponsiveContainer>
             )}
           </div>
-        </GlassCard>
+
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>
+              {activeCount} dari {stats?.totalTablets || 0} unit tablet berada dalam kondisi prima siap beroperasi.
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Quick Action Cards Grid */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-            Aksi Cepat Manajemen Master Data
-          </h2>
+      {/* ── Bottom Section: Recent Inspections & Master Data Shortcuts ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Recent Activity List (2 columns) */}
+        <div className="lg:col-span-2 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Clock className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Pengajuan & Aktivitas Inspeksi Terbaru</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Riwayat transaksi pemeriksaan tablet yang baru saja dikirimkan oleh PIC
+              </p>
+            </div>
+            <Link href="/reports">
+              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+                Lihat Semua →
+              </span>
+            </Link>
+          </div>
+
+          {(!stats?.recentInspections || stats.recentInspections.length === 0) ? (
+            <div className="p-8 text-center text-xs text-slate-400">
+              Belum ada riwayat transaksi inspeksi pada periode ini.
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {stats.recentInspections.map((ins) => (
+                <div
+                  key={ins.id}
+                  className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/30"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 shrink-0">
+                      <Tablet className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-black text-xs text-indigo-600 dark:text-indigo-400">
+                          {ins.tablet?.qr_code || "QR-TAB"}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                          {ins.tablet?.brand} {ins.tablet?.model || "-"}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                        <span>{ins.tablet?.location?.name || "Lokasi"}</span>
+                        <span>•</span>
+                        <span>
+                          {new Date(ins.submitted_at).toLocaleTimeString("id-ID", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <StatusBadge status={ins.status} className="text-[10px]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link href="/admin/tablets" className="block">
-            <GlassCard className="p-5 flex items-center justify-between group" glowColor="indigo">
-              <div className="flex items-center gap-3.5">
-                <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
-                  <Tablet className="h-6 w-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                    Master Tablet
-                  </h4>
-                  <span className="text-xs text-slate-500">Kelola unit & QR</span>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-            </GlassCard>
-          </Link>
+        {/* Right: Master Data Shortcuts (1 column) */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Shield className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Manajemen Master Data</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Pintasan cepat pengelolaan database
+            </p>
+          </div>
 
-          <Link href="/admin/locations" className="block">
-            <GlassCard className="p-5 flex items-center justify-between group" glowColor="emerald">
-              <div className="flex items-center gap-3.5">
-                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900">
-                  <MapPin className="h-6 w-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                    Master Lokasi
-                  </h4>
-                  <span className="text-xs text-slate-500">Kelola area gudang</span>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-            </GlassCard>
-          </Link>
-
-          <Link href="/admin/users" className="block">
-            <GlassCard className="p-5 flex items-center justify-between group" glowColor="sky">
-              <div className="flex items-center gap-3.5">
-                <div className="p-3 rounded-2xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 border border-sky-100 dark:border-sky-900">
-                  <Users className="h-6 w-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                    Master User
-                  </h4>
-                  <span className="text-xs text-slate-500">Kelola akun & role</span>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-            </GlassCard>
-          </Link>
-
-          <Link href="/admin/periods" className="block">
-            <GlassCard className="p-5 flex items-center justify-between group" glowColor="amber">
-              <div className="flex items-center gap-3.5">
-                <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900">
-                  <Calendar className="h-6 w-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                    Periode Inspeksi
-                  </h4>
-                  <span className="text-xs text-slate-500">Kelola bulan aktif</span>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-            </GlassCard>
-          </Link>
+          <div className="space-y-2.5">
+            {[
+              {
+                title: "Master Tablet",
+                desc: "Kelola unit, S/N & QR",
+                icon: Tablet,
+                href: "/admin/tablets",
+                color: "text-indigo-600 dark:text-indigo-400",
+                bg: "bg-indigo-50 dark:bg-indigo-950",
+                count: `${stats?.totalTablets || 0} Unit`,
+              },
+              {
+                title: "Master Lokasi",
+                desc: "Area gudang & plant",
+                icon: MapPin,
+                href: "/admin/locations",
+                color: "text-emerald-600 dark:text-emerald-400",
+                bg: "bg-emerald-50 dark:bg-emerald-950",
+                count: `${stats?.totalLocations || 0} Area`,
+              },
+              {
+                title: "Master User",
+                desc: "Akun PIC & Manager",
+                icon: Users,
+                href: "/admin/users",
+                color: "text-sky-600 dark:text-sky-400",
+                bg: "bg-sky-50 dark:bg-sky-950",
+                count: `${stats?.totalUsers || 0} User`,
+              },
+              {
+                title: "Periode Inspeksi",
+                desc: "Jadwal & siklus bulanan",
+                icon: Calendar,
+                href: "/admin/periods",
+                color: "text-amber-600 dark:text-amber-400",
+                bg: "bg-amber-50 dark:bg-amber-950",
+                count: stats?.activePeriodName || "Aktif",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.title} href={item.href} className="block group">
+                  <div className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-800 transition-all flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-xl ${item.bg} ${item.color}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">
+                          {item.title}
+                        </h4>
+                        <span className="text-[10px] text-slate-400">{item.desc}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-right">
+                      <span className="text-[11px] font-mono font-bold text-slate-500">
+                        {item.count}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

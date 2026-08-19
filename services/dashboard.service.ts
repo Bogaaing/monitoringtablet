@@ -6,12 +6,18 @@ import { inspectionsService, Inspection } from "./inspections.service";
 
 export interface AdminDashboardStats {
   totalTablets: number;
+  activeTablets: number;
+  damagedTablets: number;
   totalUsers: number;
   totalLocations: number;
-  damagedTablets: number;
-  completedInspections: number;
-  progressPercentage: number;
   activePeriodName: string;
+  completedInspections: number;
+  pendingInspections: number;
+  rejectedInspections: number;
+  totalInspections: number;
+  progressPercentage: number;
+  locationProgress: LocationProgressData[];
+  recentInspections: Inspection[];
 }
 
 export interface PicDashboardStats {
@@ -26,6 +32,7 @@ export interface LocationProgressData {
   locationName: string;
   completed: number;
   pending: number;
+  rejected: number;
   total: number;
 }
 
@@ -43,33 +50,76 @@ export const dashboardService = {
   async getAdminStats(): Promise<AdminDashboardStats> {
     const [tabletsRes, usersRes, locationsRes, activePeriod, inspectionsRes] =
       await Promise.all([
-        tabletsService.getTablets({ limit: 100 }),
-        usersService.getUsers({ limit: 100 }),
+        tabletsService.getTablets({ limit: 500 }),
+        usersService.getUsers({ limit: 500 }),
         locationsService.getAllLocations(),
         periodsService.getActivePeriod(),
-        inspectionsService.getInspections({ limit: 100 }),
+        inspectionsService.getInspections({ limit: 500 }),
       ]);
 
     const tablets = tabletsRes.data;
-    const damagedTablets = tablets.filter(
-      (t) => t.status === "maintenance" || t.status === "inactive"
-    ).length;
+    const inspections = inspectionsRes.data;
+    const locations = locationsRes;
 
+    const damagedTablets = tablets.filter(
+      (t) => t.status === "maintenance" || t.status === "inactive" || t.status === "lost"
+    ).length;
+    const activeTablets = tablets.filter((t) => t.status === "active").length;
+
+    const completedInspections = inspections.filter((i) => i.status === "approved").length;
+    const pendingInspections = inspections.filter((i) => i.status === "pending").length;
+    const rejectedInspections = inspections.filter((i) => i.status === "rejected").length;
     const totalTablets = tablets.length;
-    const completedInspections = inspectionsRes.data.length;
+
     const progressPercentage =
       totalTablets > 0
         ? Math.min(100, Math.round((completedInspections / totalTablets) * 100))
         : 0;
 
+    // Location progress aggregation for Admin chart
+    const locationMap = new Map<string, { completed: number; pending: number; rejected: number; total: number }>();
+    locations.forEach((loc) => {
+      locationMap.set(loc.name, { completed: 0, pending: 0, rejected: 0, total: 0 });
+    });
+
+    inspections.forEach((ins) => {
+      const locName = ins.tablet?.location?.name || "Lainnya";
+      const current = locationMap.get(locName) || { completed: 0, pending: 0, rejected: 0, total: 0 };
+      current.total += 1;
+      if (ins.status === "approved") {
+        current.completed += 1;
+      } else if (ins.status === "pending") {
+        current.pending += 1;
+      } else if (ins.status === "rejected") {
+        current.rejected += 1;
+      }
+      locationMap.set(locName, current);
+    });
+
+    const locationProgress: LocationProgressData[] = Array.from(
+      locationMap.entries()
+    ).map(([locationName, stats]) => ({
+      locationName,
+      completed: stats.completed,
+      pending: stats.pending,
+      rejected: stats.rejected,
+      total: stats.total || 0,
+    }));
+
     return {
       totalTablets,
-      totalUsers: usersRes.data.length,
-      totalLocations: locationsRes.length,
+      activeTablets,
       damagedTablets,
+      totalUsers: usersRes.data.length,
+      totalLocations: locations.length,
+      activePeriodName: activePeriod ? activePeriod.name : "Periode Aktif",
       completedInspections,
+      pendingInspections,
+      rejectedInspections,
+      totalInspections: inspections.length,
       progressPercentage,
-      activePeriodName: activePeriod ? activePeriod.name : "Tidak Ada Periode",
+      locationProgress,
+      recentInspections: inspections.slice(0, 6),
     };
   },
 
@@ -114,19 +164,21 @@ export const dashboardService = {
     ).length;
 
     // Location progress aggregation
-    const locationMap = new Map<string, { completed: number; pending: number; total: number }>();
+    const locationMap = new Map<string, { completed: number; pending: number; rejected: number; total: number }>();
     locations.forEach((loc) => {
-      locationMap.set(loc.name, { completed: 0, pending: 0, total: 0 });
+      locationMap.set(loc.name, { completed: 0, pending: 0, rejected: 0, total: 0 });
     });
 
     inspections.forEach((ins) => {
       const locName = ins.tablet?.location?.name || "Lainnya";
-      const current = locationMap.get(locName) || { completed: 0, pending: 0, total: 0 };
+      const current = locationMap.get(locName) || { completed: 0, pending: 0, rejected: 0, total: 0 };
       current.total += 1;
       if (ins.status === "approved") {
         current.completed += 1;
-      } else {
+      } else if (ins.status === "pending") {
         current.pending += 1;
+      } else if (ins.status === "rejected") {
+        current.rejected += 1;
       }
       locationMap.set(locName, current);
     });
@@ -137,6 +189,7 @@ export const dashboardService = {
       locationName,
       completed: stats.completed,
       pending: stats.pending,
+      rejected: stats.rejected,
       total: stats.total || 1,
     }));
 

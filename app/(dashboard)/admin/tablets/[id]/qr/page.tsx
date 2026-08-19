@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import { tabletsService } from "@/services/tablets.service";
 import { Tablet } from "@/types";
-import { downloadQrCanvas, printQrSticker } from "@/lib/qr-utils";
+import { downloadTabletSticker, printQrSticker } from "@/lib/qr-utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Download } from "lucide-react";
 import { PropanLogo } from "@/components/ui/propan-logo";
@@ -60,10 +60,10 @@ export default function TabletQrPreviewPage() {
 
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => downloadQrCanvas(containerId, `${tablet.qr_code}_sticker.png`)}
+            onClick={() => downloadTabletSticker(tablet, `${tablet.qr_code || "tablet"}_sticker.png`)}
             variant="outline"
             size="sm"
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs font-semibold"
           >
             <Download className="h-4 w-4 text-indigo-600" />
             <span>Download PNG</span>
@@ -72,7 +72,7 @@ export default function TabletQrPreviewPage() {
           <Button
             onClick={() => printQrSticker()}
             size="sm"
-            className="gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
           >
             <Printer className="h-4 w-4" />
             <span>Cetak Label QR</span>
@@ -84,16 +84,16 @@ export default function TabletQrPreviewPage() {
       <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl">
         <div
           id={containerId}
-          className="p-8 bg-white text-slate-900 rounded-2xl border-4 border-slate-950 flex flex-col items-center justify-center text-center space-y-4 w-[320px] print:w-full print:border-4 print:border-black shadow-sm"
+          className="p-6 pb-8 bg-white text-slate-900 rounded-3xl border-4 border-slate-950 flex flex-col items-center justify-center text-center space-y-3.5 w-[320px] print:w-full print:border-4 print:border-black shadow-sm"
         >
           {/* Header: PT. PROPAN RAYA ICC */}
-          <div className="w-full border-b border-slate-200 pb-3 text-center">
+          <div className="w-full border-b-2 border-slate-200 pb-3 text-center">
             <span className="font-extrabold text-[17px] text-[#4F46E5] tracking-wider uppercase block leading-tight">
               PT. PROPAN RAYA ICC
             </span>
           </div>
 
-          <div className="p-2.5 bg-white rounded-xl border border-slate-100 flex items-center justify-center">
+          <div className="p-2.5 bg-white rounded-2xl border border-slate-100 flex items-center justify-center shadow-2xs">
             <QRCodeCanvas
               value={qrPayload}
               size={180}
@@ -102,17 +102,17 @@ export default function TabletQrPreviewPage() {
             />
           </div>
 
-          <div className="space-y-1.5 w-full pt-3 border-t border-slate-200 text-center">
-            <div className="font-mono text-xl font-black text-[#4F46E5] tracking-wider uppercase">
+          <div className="space-y-1 w-full pt-3 pb-1 border-t-2 border-slate-200 text-center">
+            <div className="font-mono text-2xl font-black text-[#4F46E5] tracking-wider uppercase leading-none py-1">
               {tablet.qr_code || "TB 10"}
             </div>
-            <div className="text-xs font-bold text-slate-800 truncate px-2">
+            <div className="text-xs font-bold text-slate-800 leading-snug">
               {tablet.model ? (tablet.brand ? `${tablet.model} (${tablet.brand})` : tablet.model) : "Exproof (P9000)"}
             </div>
-            <div className="text-[11px] font-mono text-slate-600 font-medium truncate px-2">
+            <div className="text-[11px] font-mono text-slate-600 font-medium leading-snug">
               S/N: {tablet.serial_number || "3559.2810.1241.290"}
             </div>
-            <div className="text-xs font-semibold text-slate-700 truncate px-2">
+            <div className="text-xs font-semibold text-slate-700 leading-snug">
               Loc: {tablet.location?.name || "Politur"}
             </div>
           </div>
