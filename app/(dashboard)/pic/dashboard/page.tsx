@@ -90,8 +90,6 @@ export default function PicDashboardPage() {
     .filter((i) => i.status === "pending" || i.status === "submitted")
     .slice(0, 3);
 
-  const recentInspections = inspectionsList.slice(0, 4);
-
   // Status Badge Helper matching modern system
   const renderStatusBadge = (status: string) => {
     switch (status) {
@@ -347,69 +345,6 @@ export default function PicDashboardPage() {
                   <div className="text-[11px] text-slate-400 flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-[#3842E2]" />
                     <span>{ins.tablet?.location?.name || "Politur"}</span>
-                  </div>
-                </div>
-
-                <ChevronRight className="w-5 h-5 text-slate-400 shrink-0" />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ─── 5. RECENT INSPECTION ACTIVITY ─── */}
-      <div className="space-y-2.5 pt-1">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#3842E2]" />
-            <span>Aktivitas Inspeksi Terbaru</span>
-          </h3>
-          <Link href="/pic/inspections">
-            <span className="text-xs font-bold text-[#3842E2] dark:text-indigo-400 flex items-center gap-0.5 hover:underline">
-              <span>Riwayat</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </span>
-          </Link>
-        </div>
-
-        {recentInspections.length === 0 ? (
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 text-center text-xs text-slate-400 py-6">
-            Belum ada aktivitas inspeksi pada periode ini.
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {recentInspections.map((ins) => (
-              <div
-                key={ins.id}
-                onClick={() => setSelectedInspection(ins)}
-                className="bg-white dark:bg-slate-800/90 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:border-indigo-100 dark:hover:border-indigo-900/50 transition-all cursor-pointer flex items-center justify-between gap-3 active:scale-[0.99]"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#3842E2] dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-100/60 dark:border-indigo-900/40">
-                  <TabletIcon className="w-6 h-6 stroke-[1.8]" />
-                </div>
-
-                <div className="flex-1 min-w-0 space-y-0.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-base font-black text-[#3842E2] dark:text-indigo-400 leading-tight truncate">
-                      {ins.tablet?.qr_code || "TB 04"}
-                    </span>
-                    <div className="shrink-0">
-                      {renderStatusBadge(ins.status)}
-                    </div>
-                  </div>
-                  <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    {ins.tablet?.model || "P9000"} • {ins.tablet?.brand || "Exproof"}
-                  </div>
-                  <div className="text-[11px] text-slate-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-[#3842E2]" />
-                    <span>
-                      {new Date(ins.submitted_at).toLocaleTimeString("id-ID", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {" • "}
-                      {ins.tablet?.location?.name || "Politur"}
-                    </span>
                   </div>
                 </div>
 
