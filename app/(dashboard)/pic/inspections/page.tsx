@@ -210,22 +210,35 @@ export default function PicInspectionsPage() {
   const fetchInspections = async () => {
     setLoading(true);
     try {
+      const userLocId = currentUser?.location_id || currentUser?.location?.id;
+      const userLocName = currentUser?.location?.name?.trim().toLowerCase();
+
       const res = await inspectionsService.getInspections({
         limit: 100,
       });
 
+      let rawData: Inspection[] = [];
       if (res.data && res.data.length > 0) {
-        // Merge real data with fallback if needed to ensure all test cases are visible
-        const existingIds = new Set(res.data.map((d) => d.id));
-        const merged = [...res.data];
-        FALLBACK_INSPECTIONS.forEach((fb) => {
-          if (!existingIds.has(fb.id)) {
-            merged.push(fb);
-          }
-        });
-        setInspections(merged);
+        rawData = res.data;
       } else {
-        setInspections(FALLBACK_INSPECTIONS);
+        rawData = FALLBACK_INSPECTIONS;
+      }
+
+      // Filter inspections matching user's assigned location
+      if (userLocId || userLocName) {
+        const filteredByLocation = rawData.filter((ins) => {
+          const tabLocId = ins.tablet?.location_id || ins.tablet?.location?.id;
+          const tabLocName = ins.tablet?.location?.name?.trim().toLowerCase();
+
+          const matchId = userLocId && tabLocId && userLocId === tabLocId;
+          const matchName = userLocName && tabLocName && userLocName === tabLocName;
+          const matchPic = ins.pic_id && currentUser?.id && ins.pic_id === currentUser.id;
+
+          return Boolean(matchId || matchName || matchPic);
+        });
+        setInspections(filteredByLocation);
+      } else {
+        setInspections(rawData);
       }
     } catch (e) {
       console.warn("Using fallback inspections dataset:", e);
@@ -239,9 +252,26 @@ export default function PicInspectionsPage() {
     fetchInspections();
   }, [currentUser]);
 
-  // ─── Filter & Search Logic ────────────────────────────────────────────────
+  // ─── Filter & Search Logic (Location + Status + Search) ───────────────────
   const filteredList = useMemo(() => {
+    const userLocId = currentUser?.location_id || currentUser?.location?.id;
+    const userLocName = currentUser?.location?.name?.trim().toLowerCase();
+
     return inspections.filter((ins) => {
+      // 0. Location Filter based on logged-in user
+      if (userLocId || userLocName) {
+        const tabLocId = ins.tablet?.location_id || ins.tablet?.location?.id;
+        const tabLocName = ins.tablet?.location?.name?.trim().toLowerCase();
+
+        const matchId = userLocId && tabLocId && userLocId === tabLocId;
+        const matchName = userLocName && tabLocName && userLocName === tabLocName;
+        const matchPic = ins.pic_id && currentUser?.id && ins.pic_id === currentUser.id;
+
+        if (!matchId && !matchName && !matchPic) {
+          return false;
+        }
+      }
+
       // 1. Status Filter
       if (selectedFilter !== "all") {
         if (selectedFilter === "pending" && ins.status !== "pending" && ins.status !== "submitted") {
@@ -275,7 +305,7 @@ export default function PicInspectionsPage() {
         sn.includes(s)
       );
     });
-  }, [inspections, selectedFilter, search]);
+  }, [inspections, selectedFilter, search, currentUser]);
 
   // ─── Group by Date Helper ─────────────────────────────────────────────────
   const groupedInspections = useMemo(() => {
