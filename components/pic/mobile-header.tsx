@@ -54,53 +54,53 @@ export function PicMobileHeader({ user }: PicMobileHeaderProps) {
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : "AR";
+    : "JM";
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 border-b border-slate-200/80 dark:border-slate-800 backdrop-blur-md px-3.5 py-2">
-      <div className="flex items-center justify-between gap-2">
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 border-b border-slate-100 dark:border-slate-800 backdrop-blur-md px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
         {/* Left: Avatar + User Name + Location + Role Badge */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-sm shadow-indigo-500/20 border border-indigo-500/30">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-full bg-[#3B40E8] text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-sm">
             {initials}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 leading-none">
-              <span className="text-xs font-black text-slate-900 dark:text-slate-100 truncate">
-                {user?.name || "Ahmad Rizky"}
+            <div className="flex items-center gap-2 leading-none">
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                {user?.name || "Joko Maryono"}
               </span>
-              <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200/60 shrink-0 uppercase tracking-wider">
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#EDE9FE] text-[#6D28D9] dark:bg-purple-950/80 dark:text-purple-300 shrink-0 uppercase tracking-wide">
                 PIC PWA
               </span>
             </div>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-0.5 truncate mt-0.5">
-              <MapPin className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
-              <span className="truncate">{user?.location?.name || "Belum Ada Penugasan Lokasi"}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1 truncate mt-1">
+              <MapPin className="w-3.5 h-3.5 text-[#4F46E5] shrink-0" />
+              <span className="truncate">{user?.location?.name || "Politur"}</span>
             </span>
           </div>
         </div>
 
         {/* Right: Connection Status & Pending Sync */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {pendingCount > 0 ? (
             <button
               onClick={handleAutoSync}
               disabled={syncing || !isOnline}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 text-amber-700 dark:text-amber-300 text-[9px] font-bold shadow-2xs"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 text-amber-700 dark:text-amber-300 text-xs font-semibold shadow-2xs"
               title="Klik untuk menyinkronkan data offline"
             >
-              <RefreshCw className={`w-2.5 h-2.5 ${syncing ? "animate-spin" : ""}`} />
-              <span>🟠 {pendingCount} Pending Sync</span>
+              <RefreshCw className={`w-3 h-3 ${syncing ? "animate-spin" : ""}`} />
+              <span>{pendingCount} Pending</span>
             </button>
           ) : isOnline ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 text-emerald-700 dark:text-emerald-300 text-[9px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              🟢 Online
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ECFDF5] dark:bg-emerald-950/40 border border-emerald-200/60 text-[#059669] dark:text-emerald-400 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+              <span>Online</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200/60 text-rose-700 dark:text-rose-300 text-[9px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-              🔴 Offline
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200/60 text-rose-700 dark:text-rose-400 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span>Offline</span>
             </span>
           )}
         </div>

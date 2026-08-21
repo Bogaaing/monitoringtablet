@@ -33,7 +33,7 @@ export function DashboardShell({
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 flex flex-col items-center">
         {/* Mobile PWA Container (Max Width 430px centered on larger screens) */}
-        <div className="w-full max-w-[430px] min-h-screen bg-white dark:bg-slate-900 shadow-2xl border-x border-slate-200 dark:border-slate-800 flex flex-col relative pb-24">
+        <div className="w-full max-w-[430px] min-h-screen bg-[#F7F8FC] dark:bg-slate-900 shadow-2xl border-x border-slate-200 dark:border-slate-800 flex flex-col relative pb-24">
           <PicMobileHeader user={user} activePeriod={activePeriod} />
 
           <main className="flex-1 p-4 w-full">
