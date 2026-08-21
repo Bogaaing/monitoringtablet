@@ -116,17 +116,17 @@ export function QRCodeCard({ tablet, onRegenerate }: QRCodeCardProps) {
               </div>
 
               {/* Tablet Info Metadata */}
-              <div className="space-y-1 w-full pt-2.5 border-t-2 border-slate-200 text-center">
-                <div className="font-mono text-2xl font-black text-[#4F46E5] tracking-wider uppercase leading-none py-1">
+              <div className="space-y-1.5 w-full pt-3 border-t-2 border-slate-200 text-center">
+                <div className="font-sans text-3xl sm:text-4xl font-black text-[#4338CA] tracking-wide uppercase leading-none py-1">
                   {tablet.qr_code || "TB 10"}
                 </div>
-                <div className="text-xs font-bold text-slate-800 leading-snug">
+                <div className="text-sm font-bold text-slate-900 leading-snug">
                   {tablet.model ? (tablet.brand ? `${tablet.model} (${tablet.brand})` : tablet.model) : "Exproof (P9000)"}
                 </div>
-                <div className="text-[11px] font-mono text-slate-600 font-medium leading-snug">
+                <div className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
                   S/N: {tablet.serial_number || "3559.2810.1241.290"}
                 </div>
-                <div className="text-xs font-semibold text-slate-700 leading-snug">
+                <div className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
                   Loc: {tablet.location?.name || "Politur"}
                 </div>
               </div>

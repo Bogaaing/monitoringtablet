@@ -121,16 +121,16 @@ export async function createTabletStickerCanvas(tablet: Tablet): Promise<HTMLCan
   ctx.strokeStyle = "#E2E8F0";
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(50, 560);
-  ctx.lineTo(width - 50, 560);
+  ctx.moveTo(50, 545);
+  ctx.lineTo(width - 50, 545);
   ctx.stroke();
 
-  // Tablet QR Code / Code Identifier (e.g. TB 08)
+  // Tablet QR Code / Code Identifier (e.g. TB 110, TB 10) - Large, prominent bold font
   ctx.fillStyle = "#4338CA";
-  ctx.font = "900 42px 'Courier New', Courier, monospace, sans-serif";
+  ctx.font = "900 62px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Arial Black', sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(tablet.qr_code || "TB-01", width / 2, 615);
+  ctx.fillText(tablet.qr_code || "TB-01", width / 2, 612);
 
   // Model & Brand
   const modelText = tablet.model
@@ -139,19 +139,19 @@ export async function createTabletStickerCanvas(tablet: Tablet): Promise<HTMLCan
       : tablet.model
     : "Tablet Unit";
   ctx.fillStyle = "#0F172A";
-  ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  ctx.fillText(modelText, width / 2, 675);
+  ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  ctx.fillText(modelText, width / 2, 680);
 
-  // Serial Number
-  ctx.fillStyle = "#475569";
-  ctx.font = "600 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace, sans-serif";
-  ctx.fillText(`S/N: ${tablet.serial_number || "-"}`, width / 2, 730);
+  // Serial Number - Bold, prominent S/N
+  ctx.fillStyle = "#0F172A";
+  ctx.font = "bold 27px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillText(`S/N: ${tablet.serial_number || "-"}`, width / 2, 745);
 
-  // Location
+  // Location - Bold, prominent Location
   const locName = tablet.location?.name || "Belum Ditentukan";
-  ctx.fillStyle = "#334155";
-  ctx.font = "bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  ctx.fillText(`Loc: ${locName}`, width / 2, 785);
+  ctx.fillStyle = "#0F172A";
+  ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  ctx.fillText(`Loc: ${locName}`, width / 2, 808);
 
   return canvas;
 }
