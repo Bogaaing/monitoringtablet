@@ -43,8 +43,11 @@ export default function PicDashboardPage() {
       setActivePeriod(p);
 
       try {
+        const userLocId = u?.location_id || u?.location?.id;
+        const userLocName = u?.location?.name?.trim().toLowerCase();
+
         const tabRes = await tabletsService.getTablets({
-          locationId: u?.location_id || undefined,
+          locationId: userLocId || undefined,
           limit: 500,
         });
         const inspRes = await inspectionsService.getInspections({
@@ -52,8 +55,22 @@ export default function PicDashboardPage() {
           limit: 500,
         });
 
+        const rawInspections = inspRes.data || [];
+
+        // Filter inspections strictly matching the logged in user's assigned location
+        const filteredInspections = (userLocId || userLocName)
+          ? rawInspections.filter((ins) => {
+              const tabLocId = ins.tablet?.location_id || ins.tablet?.location?.id;
+              const tabLocName = ins.tablet?.location?.name?.trim().toLowerCase();
+              const matchId = userLocId && tabLocId && userLocId === tabLocId;
+              const matchName = userLocName && tabLocName && userLocName === tabLocName;
+              const matchPic = ins.pic_id && u?.id && ins.pic_id === u.id;
+              return Boolean(matchId || matchName || matchPic);
+            })
+          : rawInspections;
+
         setAssignedTabletsCount(tabRes.data.length || 0);
-        setInspectionsList(inspRes.data || []);
+        setInspectionsList(filteredInspections);
       } catch (e) {
         console.error("Dashboard data load error:", e);
       } finally {
