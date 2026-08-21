@@ -68,8 +68,8 @@ export default function AdminDashboardPage() {
       {/* ── Top Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageHeader
-          title="Dashboard System Overview"
-          description="Monitoring real-time inventaris tablet, progres pengujian bulanan, dan status operasional perangkat."
+          title="Dashboard Admin"
+          description="Monitoring real-time inventaris tablet, progres inspeksi bulanan, dan status operasional perangkat."
         />
         <div className="flex items-center gap-2 shrink-0">
           <Button
@@ -155,11 +155,11 @@ export default function AdminDashboardPage() {
               {loading ? "..." : stats?.totalLocations || 0}
             </div>
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-              Area Gudang
+              Produksi dan Pengemasan
             </span>
           </div>
           <div className="text-xs text-slate-500 font-medium">
-            Tersebar di seluruh pabrik & plant
+            Semua Group Proses
           </div>
         </div>
 
@@ -182,7 +182,7 @@ export default function AdminDashboardPage() {
             </span>
           </div>
           <div className="text-xs text-slate-500 font-medium">
-            Admin, Manager, dan PIC Regu
+            Manager,Admin,PIC (Kepala Regu)
           </div>
         </div>
       </div>

@@ -30,7 +30,8 @@ export function QRCodeCard({ tablet, onRegenerate }: QRCodeCardProps) {
   });
 
   const handleDownload = () => {
-    downloadTabletSticker(tablet, `${tablet.qr_code || "tablet"}_${tablet.serial_number || "qr"}.png`);
+    const locName = tablet.location?.name || "Lokasi";
+    downloadTabletSticker(tablet, `${tablet.qr_code || "tablet"}_${locName}.png`);
   };
 
   const handlePrint = () => {

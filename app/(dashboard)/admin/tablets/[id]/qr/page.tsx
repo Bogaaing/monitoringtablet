@@ -60,7 +60,10 @@ export default function TabletQrPreviewPage() {
 
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => downloadTabletSticker(tablet, `${tablet.qr_code || "tablet"}_sticker.png`)}
+            onClick={() => {
+              const locName = tablet.location?.name || "Lokasi";
+              downloadTabletSticker(tablet, `${tablet.qr_code || "tablet"}_${locName}.png`);
+            }}
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs font-semibold"

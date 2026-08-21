@@ -163,7 +163,8 @@ export async function downloadTabletSticker(tablet: Tablet, filename?: string) {
   if (typeof window === "undefined") return;
   try {
     const canvas = await createTabletStickerCanvas(tablet);
-    const finalFilename = filename || `${tablet.qr_code || "tablet"}_sticker.png`;
+    const locName = tablet.location?.name || "Lokasi";
+    const finalFilename = filename || `${tablet.qr_code || "tablet"}_${locName}.png`;
     const image = canvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = image;
