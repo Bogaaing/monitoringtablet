@@ -200,11 +200,11 @@ export default function PicDashboardPage() {
 
         {/* 4 Clean Metric Tiles (2x2 Grid with Generous Spacing) */}
         <div className="grid grid-cols-2 gap-2.5 pt-1">
-          {/* Tile 1: Total Target */}
+          {/* Tile 1: Total */}
           <div className="p-3 rounded-2xl bg-[#F8FAFC] dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Total Target
+                Total
               </span>
               <span className="text-base font-black text-slate-900 dark:text-slate-100 font-mono mt-0.5 block">
                 {totalTablets} <span className="text-xs font-semibold text-slate-500 font-sans">Unit</span>
