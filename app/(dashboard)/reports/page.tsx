@@ -44,7 +44,7 @@ export default function ReportsPage() {
 
   // Filter states
   const [filters, setFilters] = useState<ReportFilterOptions>({
-    periodId: "all",
+    periodId: "",
     locationId: "all",
     picId: "all",
     status: "all",
@@ -64,21 +64,38 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
 
   // Print timestamps (client-only to avoid hydration mismatch)
-  const [currentDateStr, setCurrentDateStr] = useState("17 Agustus 2026");
-  const [currentTimeStr, setCurrentTimeStr] = useState("21:41 WIB");
+  const [currentDateStr, setCurrentDateStr] = useState("");
+  const [currentTimeStr, setCurrentTimeStr] = useState("");
 
   // Fetch Master Filter Options & User Profile
   useEffect(() => {
     Promise.all([
       periodsService.getAllPeriods(),
+      periodsService.getCurrentMonthPeriod(),
       locationsService.getAllLocations(),
       usersService.getUsers({ role: "pic", limit: 100 }),
       authService.getCurrentProfile(),
-    ]).then(([pList, lList, uRes, userProf]) => {
+    ]).then(([pList, currentP, lList, uRes, userProf]) => {
       setPeriods(pList);
       setLocations(lList);
       setPics(uRes.data);
       setCurrentUser(userProf);
+
+      // Default filter to current month period
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+
+      const activeOrCurrentPeriod =
+        currentP ||
+        pList.find((p) => p.year === currentYear && p.month === currentMonth) ||
+        pList.find((p) => p.is_active);
+
+      if (activeOrCurrentPeriod?.id) {
+        setFilters((prev) => ({ ...prev, periodId: activeOrCurrentPeriod.id }));
+      } else {
+        setFilters((prev) => ({ ...prev, periodId: "00000000-0000-0000-0000-000000000000" }));
+      }
     });
 
     const now = new Date();
@@ -177,12 +194,26 @@ export default function ReportsPage() {
   const pendingRatePct = totalTablets > 0 ? ((totalPending / totalTablets) * 100).toFixed(2) : "0";
 
   // Active / Selected Period Name
+  const now = new Date();
+  const defaultMonthYear = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(now);
   const selectedPeriodObj =
     periods.find((p) => p.id === filters.periodId) ||
-    periods.find((p) => p.is_active) ||
-    periods[0];
-  const activePeriodName = selectedPeriodObj ? selectedPeriodObj.name : "Agustus 2026";
-  const activePeriodStatus = selectedPeriodObj?.is_active ? "Periode Aktif" : "Arsip Periode";
+    periods.find((p) => p.year === now.getFullYear() && p.month === now.getMonth() + 1) ||
+    periods.find((p) => p.is_active);
+
+  const activePeriodName =
+    filters.periodId === "all"
+      ? "Semua Periode"
+      : selectedPeriodObj
+      ? selectedPeriodObj.name
+      : `Periode ${defaultMonthYear}`;
+
+  const activePeriodStatus =
+    filters.periodId === "all"
+      ? "Semua Periode"
+      : selectedPeriodObj?.is_active
+      ? "Periode Aktif"
+      : "Arsip Periode";
 
   // Role display
   const userRoleDisplay =
@@ -236,7 +267,7 @@ export default function ReportsPage() {
             <div className="space-y-1">
               <label className="text-xs text-slate-500 font-medium">Periode Inspeksi</label>
               <select
-                value={filters.periodId}
+                value={filters.periodId || ""}
                 onChange={(e) => setFilters({ ...filters, periodId: e.target.value })}
                 className="w-full h-9 px-3 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
               >

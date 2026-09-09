@@ -27,12 +27,40 @@ export interface ApprovalSummaryData {
   approvalRate: number;
 }
 
+async function resolvePeriodId(filters?: ReportFilterOptions): Promise<string | undefined> {
+  // Explicitly requested 'all' periods (historical report)
+  if (filters?.periodId === "all") {
+    return "all";
+  }
+  // Specific period ID provided
+  if (filters?.periodId && filters.periodId !== "all") {
+    return filters.periodId;
+  }
+  // Default: resolve current month period automatically
+  const currentPeriod =
+    (await periodsService.getCurrentMonthPeriod()) ||
+    (await periodsService.getActivePeriod());
+
+  if (currentPeriod?.id) {
+    return currentPeriod.id;
+  }
+
+  // If no period registered for current month, return dummy ID to produce empty state
+  return "00000000-0000-0000-0000-000000000000";
+}
+
 export const reportsService = {
   async getInspectionSummary(filters?: ReportFilterOptions): Promise<InspectionSummaryData[]> {
+    const periodId = await resolvePeriodId(filters);
     const [locations, tabletsRes, inspectionsRes] = await Promise.all([
       locationsService.getAllLocations(),
-      tabletsService.getTablets({ limit: 100 }),
-      inspectionsService.getInspections({ limit: 100, periodId: filters?.periodId, picId: filters?.picId, status: filters?.status }),
+      tabletsService.getTablets({ limit: 500 }),
+      inspectionsService.getInspections({
+        limit: 500,
+        periodId,
+        picId: filters?.picId,
+        status: filters?.status,
+      }),
     ]);
 
     let tablets = tabletsRes.data;
@@ -48,29 +76,30 @@ export const reportsService = {
         const locTablets = tablets.filter((t) => t.location_id === loc.id);
         const locInspections = inspections.filter((i) => i.tablet?.location_id === loc.id);
         const completed = locInspections.length;
-        const totalTablets = locTablets.length || 1;
+        const totalTablets = locTablets.length;
         const pending = Math.max(0, totalTablets - completed);
-        const completionRate = Math.round((completed / totalTablets) * 100);
+        const completionRate = totalTablets > 0 ? Math.min(100, Math.round((completed / totalTablets) * 100)) : 0;
 
         return {
           locationName: loc.name,
           totalTablets,
           completed,
           pending,
-          completionRate: Math.min(100, completionRate),
+          completionRate,
         };
       });
   },
 
   async getDamagedTablets(filters?: ReportFilterOptions): Promise<Tablet[]> {
-    const res = await tabletsService.getTablets({ limit: 100, locationId: filters?.locationId });
+    const res = await tabletsService.getTablets({ limit: 500, locationId: filters?.locationId });
     return res.data.filter((t) => t.status === "maintenance" || t.status === "inactive");
   },
 
   async getApprovalSummary(filters?: ReportFilterOptions): Promise<ApprovalSummaryData> {
+    const periodId = await resolvePeriodId(filters);
     const res = await inspectionsService.getInspections({
-      limit: 100,
-      periodId: filters?.periodId,
+      limit: 500,
+      periodId,
       picId: filters?.picId,
       status: filters?.status,
     });
@@ -92,9 +121,10 @@ export const reportsService = {
   },
 
   async getInspectionHistory(filters?: ReportFilterOptions): Promise<Inspection[]> {
+    const periodId = await resolvePeriodId(filters);
     const res = await inspectionsService.getInspections({
-      limit: 100,
-      periodId: filters?.periodId,
+      limit: 500,
+      periodId,
       picId: filters?.picId,
       status: filters?.status,
     });
