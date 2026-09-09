@@ -48,13 +48,19 @@ export interface ManagerDashboardStats {
 
 export const dashboardService = {
   async getAdminStats(): Promise<AdminDashboardStats> {
-    const [tabletsRes, usersRes, locationsRes, activePeriod, inspectionsRes] =
+    const activePeriod =
+      (await periodsService.getCurrentMonthPeriod()) ||
+      (await periodsService.getActivePeriod());
+
+    const [tabletsRes, usersRes, locationsRes, inspectionsRes] =
       await Promise.all([
         tabletsService.getTablets({ limit: 500 }),
         usersService.getUsers({ limit: 500 }),
         locationsService.getAllLocations(),
-        periodsService.getActivePeriod(),
-        inspectionsService.getInspections({ limit: 500 }),
+        inspectionsService.getInspections({
+          periodId: activePeriod?.id || "00000000-0000-0000-0000-000000000000",
+          limit: 500,
+        }),
       ]);
 
     const tablets = tabletsRes.data;
@@ -147,8 +153,15 @@ export const dashboardService = {
   },
 
   async getManagerStats(): Promise<ManagerDashboardStats> {
+    const activePeriod =
+      (await periodsService.getCurrentMonthPeriod()) ||
+      (await periodsService.getActivePeriod());
+
     const [inspectionsRes, locations] = await Promise.all([
-      inspectionsService.getInspections({ limit: 100 }),
+      inspectionsService.getInspections({
+        periodId: activePeriod?.id || "00000000-0000-0000-0000-000000000000",
+        limit: 500,
+      }),
       locationsService.getAllLocations(),
     ]);
 

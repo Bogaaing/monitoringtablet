@@ -23,6 +23,51 @@ export const periodsService = {
     return null;
   },
 
+  async getCurrentMonthPeriod(): Promise<InspectionPeriod | null> {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    try {
+      const supabase = createClient() as any;
+      const { data, error } = await supabase
+        .from("inspection_periods")
+        .select("*")
+        .eq("year", currentYear)
+        .eq("month", currentMonth)
+        .maybeSingle();
+
+      if (!error && data) return data as InspectionPeriod;
+    } catch (e) {}
+
+    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const adminSupabase = createAdminClient() as any;
+        const { data, error } = await adminSupabase
+          .from("inspection_periods")
+          .select("*")
+          .eq("year", currentYear)
+          .eq("month", currentMonth)
+          .maybeSingle();
+
+        if (!error && data) return data as InspectionPeriod;
+      } catch (e) {}
+    }
+
+    try {
+      const all = await this.getAllPeriods();
+      const matched = all.find((p) => p.year === currentYear && p.month === currentMonth);
+      if (matched) return matched;
+
+      const active = all.find((p) => p.is_active);
+      if (active && active.year === currentYear && active.month === currentMonth) {
+        return active;
+      }
+    } catch (e) {}
+
+    return null;
+  },
+
   async getAllPeriods(): Promise<InspectionPeriod[]> {
     try {
       const supabase = createClient() as any;

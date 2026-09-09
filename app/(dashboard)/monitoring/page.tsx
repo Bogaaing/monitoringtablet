@@ -12,6 +12,7 @@ import { dashboardService } from "@/services/dashboard.service";
 import { inspectionsService, Inspection } from "@/services/inspections.service";
 import { locationsService } from "@/services/locations.service";
 import { tabletsService } from "@/services/tablets.service";
+import { periodsService } from "@/services/periods.service";
 import { Tablet, Location } from "@/types";
 import {
   Activity,
@@ -50,29 +51,54 @@ export default function LiveMonitoringPage() {
   const fetchLiveMonitoringData = async () => {
     setRefreshing(true);
     try {
-      const [inspRes, locList, tabRes] = await Promise.all([
-        inspectionsService.getInspections({ limit: 100 }),
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+
+      // 1. Fetch current month's official period, locations, and registered tablets
+      const [currentPeriod, locList, tabRes] = await Promise.all([
+        periodsService.getCurrentMonthPeriod(),
         locationsService.getAllLocations(),
-        tabletsService.getTablets({ limit: 100 }),
+        tabletsService.getTablets({ limit: 500 }),
       ]);
 
-      setInspections(inspRes.data);
+      // 2. Fetch inspections strictly for the current month period
+      let currentInspections: Inspection[] = [];
+      if (currentPeriod?.id) {
+        const inspRes = await inspectionsService.getInspections({
+          periodId: currentPeriod.id,
+          limit: 500,
+        });
+        currentInspections = (inspRes.data || []).filter((ins) => {
+          // Verify both period_id and inspection timestamp match current month
+          if (ins.period_id && ins.period_id !== currentPeriod.id) return false;
+          if (ins.submitted_at) {
+            const d = new Date(ins.submitted_at);
+            if (d.getFullYear() !== currentYear || d.getMonth() + 1 !== currentMonth) {
+              return false;
+            }
+          }
+          return true;
+        });
+      }
+
+      setInspections(currentInspections);
       setLocations(locList);
       setTablets(tabRes.data);
 
-      // Aggregate location progress
+      // 3. Aggregate location progress strictly for current month
       const locStats = locList.map((loc) => {
         const locTablets = tabRes.data.filter((t) => t.location_id === loc.id);
-        const locInspections = inspRes.data.filter((i) => i.tablet?.location_id === loc.id);
+        const locInspections = currentInspections.filter((i) => i.tablet?.location_id === loc.id);
         const completed = locInspections.length;
-        const total = locTablets.length || 1;
+        const total = locTablets.length;
         const pending = Math.max(0, total - completed);
-        const rate = Math.min(100, Math.round((completed / total) * 100));
+        const rate = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
 
         return {
           id: loc.id,
           name: loc.name,
-          total: locTablets.length,
+          total,
           completed,
           pending,
           rate,
