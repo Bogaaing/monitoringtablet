@@ -84,7 +84,7 @@ export default function AdminDashboardPage() {
           </Button>
           <div className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/60 text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-            <span>{stats?.activePeriodName || "Agustus 2026"}</span>
+            <span>{stats?.activePeriodName || new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(new Date())}</span>
           </div>
         </div>
       </div>

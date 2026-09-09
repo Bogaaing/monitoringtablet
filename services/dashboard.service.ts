@@ -37,6 +37,7 @@ export interface LocationProgressData {
 }
 
 export interface ManagerDashboardStats {
+  activePeriodName?: string;
   waitingApprovalCount: number;
   approvedCount: number;
   rejectedCount: number;
@@ -212,7 +213,16 @@ export const dashboardService = {
       { name: "Ditolak (Rejected)", value: rejectedCount || 0, color: "#f43f5e" },
     ];
 
+    const now = new Date();
+    const monthNames = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    const defaultPeriodName = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+    const activePeriodName = activePeriod ? activePeriod.name : defaultPeriodName;
+
     return {
+      activePeriodName,
       waitingApprovalCount,
       approvedCount,
       rejectedCount,

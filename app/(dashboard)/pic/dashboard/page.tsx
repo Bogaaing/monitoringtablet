@@ -144,7 +144,7 @@ export default function PicDashboardPage() {
               Periode
             </span>
             <span className="text-xs font-black text-[#3842E2] dark:text-indigo-300 block mt-0.5">
-              {activePeriod?.name || "Agustus 2026"}
+              {activePeriod?.name || new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(new Date())}
             </span>
           </div>
         </div>

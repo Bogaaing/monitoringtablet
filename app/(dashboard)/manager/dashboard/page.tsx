@@ -202,7 +202,7 @@ export default function ManagerDashboardPage() {
 
             {/* Period Selector inside chart header */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-700 flex items-center gap-1.5 hover:bg-slate-100 transition-colors cursor-pointer select-none">
-              <span>Agustus 2026</span>
+              <span>{stats?.activePeriodName?.replace(/^Periode\s+/i, "") || new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(new Date())}</span>
               <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
             </div>
           </div>
