@@ -54,7 +54,7 @@ export const reportsService = {
     const periodId = await resolvePeriodId(filters);
     const [locations, tabletsRes, inspectionsRes] = await Promise.all([
       locationsService.getAllLocations(),
-      tabletsService.getTablets({ limit: 500 }),
+      tabletsService.getTablets({ limit: 500, status: "active" }),
       inspectionsService.getInspections({
         limit: 500,
         periodId,

@@ -153,9 +153,10 @@ export default function PicTasksPage() {
     try {
       const locationId = currentUser.location_id || undefined;
 
-      // Load tablets strictly at PIC's assigned location
+      // Load tablets strictly at PIC's assigned location and ACTIVE status
       const tabletsRes = await tabletsService.getTablets({
         locationId,
+        status: "active",
         limit: 500,
       });
       const tablets = tabletsRes.data;

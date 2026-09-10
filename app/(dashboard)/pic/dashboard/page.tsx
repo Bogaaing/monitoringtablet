@@ -48,6 +48,7 @@ export default function PicDashboardPage() {
 
         const tabRes = await tabletsService.getTablets({
           locationId: userLocId || undefined,
+          status: "active",
           limit: 500,
         });
         const inspRes = await inspectionsService.getInspections({

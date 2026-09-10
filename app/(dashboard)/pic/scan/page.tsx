@@ -80,6 +80,25 @@ export default function PicScanPage() {
         }
       }
 
+      // 2.5 Strict Status Validation: MAINTENANCE & INACTIVE tablets are excluded from routine inspection
+      if (tablet.status === "maintenance") {
+        setErrorMessage(
+          `Tablet "${tablet.qr_code}" sedang dalam status MAINTENANCE (Perbaikan/Rusak) sehingga tidak masuk dalam daftar inspeksi rutin.`
+        );
+        setStep("scan");
+        setLoading(false);
+        return;
+      }
+
+      if (tablet.status === "inactive" || tablet.status === "lost") {
+        setErrorMessage(
+          `Tablet "${tablet.qr_code}" berstatus ${tablet.status.toUpperCase()} dan tidak termasuk dalam target inspeksi.`
+        );
+        setStep("scan");
+        setLoading(false);
+        return;
+      }
+
       // 3. Fetch active period
       const period = activePeriod || (await periodsService.getActivePeriod());
       if (!period) {

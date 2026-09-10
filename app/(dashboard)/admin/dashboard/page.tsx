@@ -129,7 +129,7 @@ export default function AdminDashboardPage() {
               {loading ? "..." : `${stats?.progressPercentage || 0}%`}
             </div>
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-              {stats?.completedInspections || 0} / {stats?.totalTablets || 0} Selesai
+              {stats?.completedInspections || 0} / {stats?.activeTablets ?? activeCount} Selesai
             </span>
           </div>
           <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">

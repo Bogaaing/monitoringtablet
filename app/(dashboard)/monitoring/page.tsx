@@ -86,12 +86,12 @@ export default function LiveMonitoringPage() {
       setLocations(locList);
       setTablets(tabRes.data);
 
-      // 3. Aggregate location progress strictly for current month
+      // 3. Aggregate location progress strictly for current month (active tablets target)
       const locStats = locList.map((loc) => {
-        const locTablets = tabRes.data.filter((t) => t.location_id === loc.id);
+        const locActiveTablets = tabRes.data.filter((t) => t.location_id === loc.id && t.status === "active");
         const locInspections = currentInspections.filter((i) => i.tablet?.location_id === loc.id);
         const completed = locInspections.length;
-        const total = locTablets.length;
+        const total = locActiveTablets.length;
         const pending = Math.max(0, total - completed);
         const rate = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
 
@@ -131,9 +131,10 @@ export default function LiveMonitoringPage() {
   }, [autoRefreshInterval]);
 
   // Derived metrics
-  const totalTablets = tablets.length;
+  const activeTablets = tablets.filter((t) => t.status === "active");
+  const totalActiveTablets = activeTablets.length;
   const completedCount = inspections.length;
-  const completionRate = totalTablets > 0 ? Math.min(100, Math.round((completedCount / totalTablets) * 100)) : 0;
+  const completionRate = totalActiveTablets > 0 ? Math.min(100, Math.round((completedCount / totalActiveTablets) * 100)) : 0;
   
   // Critical devices (damaged status or reported issues)
   const damagedTablets = tablets.filter((t) => t.status === "maintenance" || t.status === "inactive");
@@ -204,7 +205,7 @@ export default function LiveMonitoringPage() {
         <StatGradientCard
           title="Tingkat Penyelesaian"
           value={`${completionRate}%`}
-          description={`${completedCount} dari ${totalTablets} tablet terinspeksi`}
+          description={`${completedCount} dari ${totalActiveTablets} tablet terinspeksi`}
           icon={Activity}
           gradient="emerald"
           badgeText="Progres"
@@ -212,7 +213,7 @@ export default function LiveMonitoringPage() {
 
         <StatGradientCard
           title="Total Tablet Active"
-          value={totalTablets}
+          value={totalActiveTablets}
           description="Unit operasional terdaftar"
           icon={TabletIcon}
           gradient="indigo"

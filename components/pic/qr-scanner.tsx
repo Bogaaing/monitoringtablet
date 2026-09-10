@@ -382,6 +382,23 @@ export function QRScanner({ onScanSuccess, currentUser }: QRScannerProps) {
           }
         }
 
+        // Strict Status Validation: MAINTENANCE & INACTIVE tablets are excluded from routine inspection
+        if (tablet.status === "maintenance") {
+          setErrorMessage(
+            `Akses Ditolak: Tablet "${tablet.qr_code}" sedang dalam status MAINTENANCE (Perbaikan/Rusak). Tablet tidak memerlukan inspeksi rutin sampai kembali aktif.`
+          );
+          setScanStatus("error");
+          return;
+        }
+
+        if (tablet.status === "inactive" || tablet.status === "lost") {
+          setErrorMessage(
+            `Akses Ditolak: Tablet "${tablet.qr_code}" berstatus ${tablet.status.toUpperCase()} dan tidak termasuk dalam target inspeksi.`
+          );
+          setScanStatus("error");
+          return;
+        }
+
         setDetectedTablet(tablet);
         setScanStatus("success");
       }, remainingDelay);

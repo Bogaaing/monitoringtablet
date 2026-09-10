@@ -79,8 +79,8 @@ export const dashboardService = {
     const totalTablets = tablets.length;
 
     const progressPercentage =
-      totalTablets > 0
-        ? Math.min(100, Math.round((completedInspections / totalTablets) * 100))
+      activeTablets > 0
+        ? Math.min(100, Math.round((completedInspections / activeTablets) * 100))
         : 0;
 
     // Location progress aggregation for Admin chart
@@ -132,7 +132,7 @@ export const dashboardService = {
 
   async getPicStats(picId?: string): Promise<PicDashboardStats> {
     const [tabletsRes, inspectionsRes] = await Promise.all([
-      tabletsService.getTablets({ limit: 100 }),
+      tabletsService.getTablets({ limit: 100, status: "active" }),
       inspectionsService.getInspections({ picId, limit: 10 }),
     ]);
 
