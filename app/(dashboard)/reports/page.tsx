@@ -208,6 +208,12 @@ export default function ReportsPage() {
       ? selectedPeriodObj.name
       : `Periode ${defaultMonthYear}`;
 
+  const cleanPeriod = activePeriodName.replace(/^(periode\s+)+/i, "");
+  const formattedPeriodTitle =
+    filters.periodId === "all"
+      ? "Semua Periode"
+      : `Periode ${cleanPeriod}`;
+
   const activePeriodStatus =
     filters.periodId === "all"
       ? "Semua Periode"
@@ -395,9 +401,9 @@ export default function ReportsPage() {
           style={{ fontFamily: "'Inter', sans-serif" }}
         >
           {/* 1. Header Section */}
-          <div className="flex items-center justify-between border-b border-indigo-100 pb-5">
+          <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-2 border-b border-indigo-100 pb-5">
             {/* Left: TabMonitor Branding */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-start">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-tr from-[#4F46E5] to-[#6366F1] text-white shadow-sm shrink-0">
                 <TabletIcon className="h-6 w-6 stroke-[2.2]" />
               </div>
@@ -413,17 +419,17 @@ export default function ReportsPage() {
             </div>
 
             {/* Center: Title & Period */}
-            <div className="text-center md:text-left flex flex-col justify-center">
-              <h1 className="text-[20px] sm:text-[22px] font-black text-slate-900 tracking-tight leading-none uppercase">
+            <div className="text-center flex flex-col items-center justify-center">
+              <h1 className="text-[20px] sm:text-[22px] font-black text-slate-900 tracking-tight leading-none uppercase text-center">
                 LAPORAN PROGRES INSPEKSI
               </h1>
-              <p className="text-sm font-semibold text-slate-600 mt-1">
-                Periode {activePeriodName}
+              <p className="text-sm font-semibold text-slate-600 mt-1 text-center">
+                {formattedPeriodTitle}
               </p>
             </div>
 
             {/* Right Top: Clean Report QR Code */}
-            <div className="flex items-center justify-center shrink-0">
+            <div className="flex items-center justify-center sm:justify-end shrink-0 w-full sm:w-auto">
               <div className="p-1 rounded-lg border border-slate-200 bg-white">
                 <QRCodeSVG
                   value="https://monitoringtablet.vercel.app/reports"
@@ -441,7 +447,7 @@ export default function ReportsPage() {
               <div className="flex items-center gap-2.5">
                 <CalendarIcon className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span className="w-24 text-slate-500 font-medium">Periode</span>
-                <span className="font-semibold text-slate-900">: {activePeriodName}</span>
+                <span className="font-semibold text-slate-900">: {formattedPeriodTitle}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Clock className="w-4 h-4 text-indigo-600 shrink-0" />
@@ -705,10 +711,10 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {/* Manager Signature Column */}
+            {/* Approval Signature Column */}
             <div className="flex flex-col items-center justify-between px-4">
               <span className="text-xs font-semibold text-slate-700">
-                Disetujui oleh (Manager)
+                Disetujui oleh (Approval)
               </span>
 
               {/* Clean Empty Signature Space */}
@@ -720,7 +726,7 @@ export default function ReportsPage() {
                   Anggriani Setiawan Novi
                 </span>
                 <span className="text-[11px] font-medium text-slate-500 block">
-                  Manager
+                  Approval
                 </span>
               </div>
             </div>

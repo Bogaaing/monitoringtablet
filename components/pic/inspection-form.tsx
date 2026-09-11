@@ -207,7 +207,10 @@ export function InspectionForm({
                 Formulir Inspeksi Tablet
               </h2>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Periode {activePeriod.name} — Unit:{" "}
+                {activePeriod.name.toLowerCase().startsWith("periode")
+                  ? activePeriod.name
+                  : `Periode ${activePeriod.name}`}{" "}
+                — Unit:{" "}
                 <span className="font-bold text-[#473bf0] dark:text-indigo-400 font-mono">
                   {tablet.qr_code}
                 </span>
