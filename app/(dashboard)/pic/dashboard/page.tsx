@@ -305,7 +305,7 @@ export default function PicDashboardPage() {
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-[#D97706]" />
-            <span>Menunggu Persetujuan Manager</span>
+            <span>Menunggu Persetujuan Approval</span>
           </h3>
           <Link href="/pic/inspections?status=pending">
             <span className="text-xs font-bold text-[#3842E2] dark:text-indigo-400 flex items-center gap-0.5 hover:underline">

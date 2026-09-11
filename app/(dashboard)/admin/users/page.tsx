@@ -239,7 +239,7 @@ export default function AdminUsersPage() {
       case "admin":
         return <Badge className="bg-purple-100 text-purple-700 border border-purple-200">Admin</Badge>;
       case "manager":
-        return <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200">Manager</Badge>;
+        return <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200">Approval</Badge>;
       case "pic":
       default:
         return <Badge variant="secondary">PIC (Kepala Regu)</Badge>;
@@ -250,7 +250,7 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       <PageHeader
         title="Kelola Pengguna Sistem (NPK Based)"
-        description="Master data akun pengguna berdasarkan 8 Digit NPK Karyawan, Peran Akses (Admin, Manager, PIC), dan Departemen."
+        description="Master data akun pengguna berdasarkan 8 Digit NPK Karyawan, Peran Akses (Admin, Approval, PIC), dan Departemen."
       >
         <div className="flex items-center gap-3">
           {/* Import Excel / CSV Button */}
@@ -295,7 +295,7 @@ export default function AdminUsersPage() {
             options: [
               { label: "Admin", value: "admin" },
               { label: "PIC (Kepala Regu)", value: "pic" },
-              { label: "Manager", value: "manager" },
+              { label: "Approval", value: "manager" },
             ],
           },
           {
@@ -495,7 +495,7 @@ export default function AdminUsersPage() {
                     className="w-full h-10 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="pic">PIC (Kepala Regu)</option>
-                    <option value="manager">Manager</option>
+                    <option value="manager">Approval</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
@@ -602,7 +602,7 @@ export default function AdminUsersPage() {
               </label>
               <textarea
                 rows={6}
-                placeholder={`11130595, Super Admin, admin, IT, admin123\n22240696, Manager Ops, manager, Operations, manager123\n33350797, PIC Penguji, pic, Inspection, pic123`}
+                placeholder={`11130595, Super Admin, admin, IT, admin123\n22240696, Approval Ops, manager, Operations, manager123\n33350797, PIC Penguji, pic, Inspection, pic123`}
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 className="w-full p-3 font-mono text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"

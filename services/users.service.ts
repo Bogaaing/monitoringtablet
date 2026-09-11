@@ -157,7 +157,7 @@ export const usersService = {
     if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
         const adminSupabase = createAdminClient();
-        const userPassword = payload.password || (payload.role === "admin" ? "admin123" : payload.role === "pic" ? "pic123" : "manager123");
+        const userPassword = payload.password || "propan123";
 
         const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
           email: generatedEmail,

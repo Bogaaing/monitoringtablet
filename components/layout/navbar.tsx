@@ -29,7 +29,7 @@ export function Navbar({
       case "manager":
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800 tracking-wider">
-            MANAGER
+            APPROVAL
           </span>
         );
       case "pic":

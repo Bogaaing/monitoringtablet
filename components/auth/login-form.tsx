@@ -19,8 +19,13 @@ export function LoginForm() {
     e.preventDefault();
 
     const cleanNpk = npk.trim();
-    if (!cleanNpk || !password) {
-      setErrorMsg("NPK dan kata sandi wajib diisi.");
+    if (!cleanNpk) {
+      setErrorMsg("NPK wajib diisi.");
+      return;
+    }
+
+    if (!password || password.trim() === "") {
+      setErrorMsg("Password wajib diisi.");
       return;
     }
 
@@ -151,45 +156,6 @@ export function LoginForm() {
           </>
         )}
       </Button>
-
-      {/* Demo Account Autofill Options */}
-      <div className="pt-[18px] border-t border-slate-100 text-center space-y-1.5">
-        <span className="text-[11px] font-semibold text-slate-400 block">
-          Pilih Akun NPK Demo untuk Pengujian Cepat:
-        </span>
-        <div className="flex flex-wrap justify-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              setNpk("11130595");
-              setPassword("admin123");
-            }}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
-          >
-            Admin (11130595)
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setNpk("33350797");
-              setPassword("pic123");
-            }}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
-          >
-            PIC (33350797)
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setNpk("22240696");
-              setPassword("manager123");
-            }}
-            className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-mono text-[10px] font-bold border border-slate-200 transition-colors"
-          >
-            Manager (22240696)
-          </button>
-        </div>
-      </div>
     </form>
   );
 }

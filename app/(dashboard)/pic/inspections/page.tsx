@@ -733,7 +733,7 @@ export default function PicInspectionsPage() {
               <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200/80 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs space-y-1">
                 <div className="flex items-center gap-1.5 font-bold">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>Alasan Penolakan Manager:</span>
+                  <span>Alasan Penolakan Approval:</span>
                 </div>
                 <p className="italic pl-5">"{selectedInspection.rejection_reason}"</p>
               </div>
@@ -838,7 +838,7 @@ export default function PicInspectionsPage() {
                   { id: "all", label: "Semua Status" },
                   { id: "pending", label: "Pending Review" },
                   { id: "approved", label: "Selesai (Disetujui)" },
-                  { id: "rejected", label: "Ditolak Manager" },
+                  { id: "rejected", label: "Ditolak Approval" },
                 ].map((item) => (
                   <button
                     key={item.id}

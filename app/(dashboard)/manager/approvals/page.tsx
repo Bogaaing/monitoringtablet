@@ -736,7 +736,7 @@ export default function ManagerApprovalsPage() {
             {/* Rejection Reason (If already rejected) */}
             {selectedInspection.rejection_reason && (
               <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-xs text-rose-700 dark:text-rose-300 space-y-1">
-                <span className="font-bold block">Alasan Penolakan Manager:</span>
+                <span className="font-bold block">Alasan Penolakan Approval:</span>
                 <p className="italic">"{selectedInspection.rejection_reason}"</p>
               </div>
             )}

@@ -182,7 +182,7 @@ export default function AdminDashboardPage() {
             </span>
           </div>
           <div className="text-xs text-slate-500 font-medium">
-            Manager,Admin,PIC (Kepala Regu)
+            Approval, Admin, PIC (Kepala Regu)
           </div>
         </div>
       </div>
@@ -437,7 +437,7 @@ export default function AdminDashboardPage() {
               },
               {
                 title: "Master User",
-                desc: "Akun PIC & Manager",
+                desc: "Akun PIC & Approval",
                 icon: Users,
                 href: "/admin/users",
                 color: "text-sky-600 dark:text-sky-400",

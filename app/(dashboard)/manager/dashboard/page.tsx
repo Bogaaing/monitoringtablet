@@ -74,7 +74,7 @@ export default function ManagerDashboardPage() {
       <motion.div {...fadeUp} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-[34px] font-bold text-[#111827] tracking-tight leading-tight">
-            Dashboard Manager
+            Dashboard Approval
           </h1>
           <p className="text-[16px] text-[#64748B] font-normal mt-1">
             {loading ? "Memuat data persetujuan..." : `${stats?.waitingApprovalCount || 0} inspeksi menunggu persetujuan hari ini.`}

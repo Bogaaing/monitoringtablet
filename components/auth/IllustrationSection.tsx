@@ -210,7 +210,7 @@ export function IllustrationSection() {
                 </span>
               </div>
               <div className="text-[11px] font-medium text-slate-400 mt-0.5">
-                Admin • PIC (Kepala Regu) • Manager
+                Admin • PIC (Kepala Regu) • Approval
               </div>
             </div>
           </div>

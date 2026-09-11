@@ -105,7 +105,7 @@ export default async function DashboardLayout({
     const formattedName = resolvedRole === "admin"
       ? "Super Admin"
       : resolvedRole === "manager"
-      ? "Manager Operations"
+      ? "Approval Operations"
       : "PIC (Kepala Regu)";
 
     currentUser = {

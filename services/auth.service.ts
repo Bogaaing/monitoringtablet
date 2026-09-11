@@ -124,7 +124,7 @@ export const authService = {
       return {
         id: `user-${role}-session`,
         npk: fallbackNpk,
-        name: role === "admin" ? "Super Admin" : role === "manager" ? "Manager Operations" : "PIC Penguji",
+        name: role === "admin" ? "Super Admin" : role === "manager" ? "Approval Operations" : "PIC Penguji",
         email: fallbackEmail,
         role: role,
         department: role === "admin" ? "IT & Admin" : role === "manager" ? "Operations" : "Inspection",
@@ -147,6 +147,16 @@ export const authService = {
 
     if (!/^\d{8}$/.test(cleanNpk)) {
       return { user: null, redirectUrl: null, error: "NPK harus berupa 8 digit angka." };
+    }
+
+    if (!passwordInput || passwordInput.trim() === "") {
+      return { user: null, redirectUrl: null, error: "Password wajib diisi." };
+    }
+
+    // Strict Case-Sensitive Password Validation: All users use "propan123"
+    const VALID_PASSWORD = "propan123";
+    if (passwordInput !== VALID_PASSWORD) {
+      return { user: null, redirectUrl: null, error: "Password salah. Silakan coba lagi." };
     }
 
     let targetUser: User | null = null;
@@ -195,7 +205,7 @@ export const authService = {
         targetUser = {
           id: "demo-manager-id",
           npk: "22240696",
-          name: "Manager Operations",
+          name: "Approval Operations",
           email: "22240696@tabmonitor.my.id",
           role: "manager",
           department: "Operations",

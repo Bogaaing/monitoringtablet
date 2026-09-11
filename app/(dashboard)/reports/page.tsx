@@ -226,10 +226,10 @@ export default function ReportsPage() {
     currentUser?.role === "admin"
       ? "Admin"
       : currentUser?.role === "manager"
-      ? "Manager"
+      ? "Approval"
       : currentUser?.role === "pic"
       ? "PIC"
-      : "Manager";
+      : "Approval";
 
   return (
     <div className="space-y-8 print:space-y-0">
