@@ -487,74 +487,74 @@ export default function ReportsPage() {
           </div>
 
           {/* 3. 4 Compact KPI Summary Cards */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="summary-cards-grid grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
             {/* KPI 1: TOTAL TABLET */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-indigo-600 bg-white text-indigo-600 shrink-0">
-                <TabletIcon className="h-5 w-5 stroke-[2.2]" />
+            <div className="summary-card bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-3.5 flex items-center gap-3 shadow-sm min-w-0">
+              <div className="summary-card-icon flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full border-2 border-indigo-600 bg-white text-indigo-600 shrink-0">
+                <TabletIcon className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="summary-card-title text-[10px] sm:text-[11px] font-extrabold uppercase tracking-tight text-slate-500 leading-tight">
                   TOTAL TABLET
                 </span>
-                <span className="text-2xl font-black text-slate-900 leading-tight">
+                <span className="summary-card-value text-xl sm:text-2xl font-black text-slate-900 leading-none my-1">
                   {totalTablets}
                 </span>
-                <span className="text-[10px] font-bold text-indigo-600 mt-0.5 truncate">
-                  100% dari total
+                <span className="summary-card-desc text-[10px] sm:text-[11px] font-bold text-indigo-600 leading-tight">
+                  100% dari total tablet
                 </span>
               </div>
             </div>
 
-            {/* KPI 2: SUDAH DIINSPEKSI */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0">
-                <Check className="h-6 w-6 stroke-[2.8]" />
+            {/* KPI 2: SUDAH DIISI */}
+            <div className="summary-card bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-3.5 flex items-center gap-3 shadow-sm min-w-0">
+              <div className="summary-card-icon flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0">
+                <Check className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.8]" />
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
-                  SUDAH DIINSPEKSI
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="summary-card-title text-[10px] sm:text-[11px] font-extrabold uppercase tracking-tight text-slate-500 leading-tight">
+                  SUDAH DIISI
                 </span>
-                <span className="text-2xl font-black text-slate-900 leading-tight">
+                <span className="summary-card-value text-xl sm:text-2xl font-black text-slate-900 leading-none my-1">
                   {totalCompleted}
                 </span>
-                <span className="text-[10px] font-bold text-emerald-600 mt-0.5 truncate">
-                  {completedRatePct}% dari total
+                <span className="summary-card-desc text-[10px] sm:text-[11px] font-bold text-emerald-600 leading-tight">
+                  {completedRatePct}% dari total tablet
                 </span>
               </div>
             </div>
 
-            {/* KPI 3: BELUM DIINSPEKSI */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-amber-500 bg-white text-amber-500 shrink-0">
-                <div className="w-3.5 h-3.5 rounded-full border-2 border-amber-500" />
+            {/* KPI 3: BELUM DIISI */}
+            <div className="summary-card bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-3.5 flex items-center gap-3 shadow-sm min-w-0">
+              <div className="summary-card-icon flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full border-2 border-amber-500 bg-white text-amber-500 shrink-0">
+                <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-amber-500" />
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 truncate">
-                  BELUM DIINSPEKSI
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="summary-card-title text-[10px] sm:text-[11px] font-extrabold uppercase tracking-tight text-slate-500 leading-tight">
+                  BELUM DIISI
                 </span>
-                <span className="text-2xl font-black text-slate-900 leading-tight">
+                <span className="summary-card-value text-xl sm:text-2xl font-black text-slate-900 leading-none my-1">
                   {totalPending}
                 </span>
-                <span className="text-[10px] font-bold text-amber-600 mt-0.5 truncate">
-                  {pendingRatePct}% dari total
+                <span className="summary-card-desc text-[10px] sm:text-[11px] font-bold text-amber-600 leading-tight">
+                  {pendingRatePct}% dari total tablet
                 </span>
               </div>
             </div>
 
-            {/* KPI 4: PROGRES KESELURUHAN */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-4 flex items-center gap-3.5 shadow-sm">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-600 text-white shrink-0">
-                <TrendingUp className="h-5 w-5 stroke-[2.5]" />
+            {/* KPI 4: PROGRES INSPEKSI */}
+            <div className="summary-card bg-white rounded-2xl border border-slate-200/90 p-3 sm:p-3.5 flex items-center gap-3 shadow-sm min-w-0">
+              <div className="summary-card-icon flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-indigo-600 text-white shrink-0">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.5]" />
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 truncate">
-                  PROGRES KESELURUHAN
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="summary-card-title text-[10px] sm:text-[11px] font-extrabold uppercase tracking-tight text-indigo-600 leading-tight">
+                  PROGRES INSPEKSI
                 </span>
-                <span className="text-2xl font-black text-slate-900 leading-tight">
+                <span className="summary-card-value text-xl sm:text-2xl font-black text-slate-900 leading-none my-1">
                   {overallRate}%
                 </span>
-                <span className="text-[10px] font-semibold text-slate-600 mt-0.5 truncate">
+                <span className="summary-card-desc text-[10px] sm:text-[11px] font-semibold text-slate-600 leading-tight">
                   Tingkat Penyelesaian
                 </span>
               </div>
@@ -899,7 +899,7 @@ export default function ReportsPage() {
       <style jsx global>{`
         @page {
           size: A4 portrait;
-          margin: 14mm 16mm;
+          margin: 12mm 14mm;
         }
 
         @media print {
@@ -912,12 +912,77 @@ export default function ReportsPage() {
             print-color-adjust: exact !important;
           }
 
-          .print\\:hidden {
+          .print\:hidden {
             display: none !important;
           }
 
-          .print\\:block {
+          .print\:block {
             display: block !important;
+          }
+
+          /* Summary Cards Grid Layout in A4 Print */
+          .summary-cards-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+            width: 100% !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          .summary-card {
+            padding: 8px 10px !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 12px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 8px !important;
+            min-width: 0 !important;
+            box-shadow: none !important;
+            background-color: #ffffff !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          .summary-card-icon {
+            width: 34px !important;
+            height: 34px !important;
+            min-width: 34px !important;
+            flex-shrink: 0 !important;
+            border-radius: 9999px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .summary-card-title {
+            font-size: 8.5pt !important;
+            font-weight: 800 !important;
+            line-height: 1.15 !important;
+            letter-spacing: -0.01em !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+          }
+
+          .summary-card-value {
+            font-size: 16pt !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+            margin: 2px 0 !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+          }
+
+          .summary-card-desc {
+            font-size: 7.5pt !important;
+            font-weight: 700 !important;
+            line-height: 1.15 !important;
+            white-space: normal !important;
+            word-break: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
           }
 
           .signature-section,
