@@ -231,6 +231,13 @@ export default function ReportsPage() {
       ? "PIC"
       : "Approval";
 
+  // Penandatangan pengesahan laporan (Approval)
+  // Hanya jika login dengan role manager, nama disesuaikan dengan session login pengguna
+  const approvalSignerName =
+    currentUser?.role === "manager" && currentUser?.name
+      ? currentUser.name
+      : "Anggriani Setiawan Novi";
+
   return (
     <div className="space-y-8 print:space-y-0">
       {/* Top Header & Export Action Bar (Web Only) */}
@@ -723,7 +730,7 @@ export default function ReportsPage() {
               <div className="w-56 border-b border-slate-900" />
               <div className="mt-2">
                 <span className="font-bold text-xs text-slate-900 block">
-                  Anggriani Setiawan Novi
+                  {approvalSignerName}
                 </span>
                 <span className="text-[11px] font-medium text-slate-500 block">
                   Approval

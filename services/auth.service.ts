@@ -121,10 +121,17 @@ export const authService = {
       const fallbackNpk = activeNpk || (role === "admin" ? "11130595" : role === "manager" ? "22240696" : "33350797");
       const fallbackEmail = `${fallbackNpk}@tabmonitor.my.id`;
 
+      const nameCookieMatch = document.cookie.match(/(?:^|; )user_name=([^;]*)/);
+      const sessionUserName = nameCookieMatch ? decodeURIComponent(nameCookieMatch[1]) : null;
+
+      const fallbackName =
+        sessionUserName ||
+        (role === "admin" ? "Super Admin" : role === "manager" ? "Approval Operations" : "PIC Penguji");
+
       return {
         id: `user-${role}-session`,
         npk: fallbackNpk,
-        name: role === "admin" ? "Super Admin" : role === "manager" ? "Approval Operations" : "PIC Penguji",
+        name: fallbackName,
         email: fallbackEmail,
         role: role,
         department: role === "admin" ? "IT & Admin" : role === "manager" ? "Operations" : "Inspection",
@@ -267,6 +274,9 @@ export const authService = {
       document.cookie = `user_npk=${encodeURIComponent(cleanNpk)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `user_email=${encodeURIComponent(internalEmail)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `demo_role=${encodeURIComponent(resolvedRole)}; path=/; max-age=86400; SameSite=Lax`;
+      if (targetUser?.name) {
+        document.cookie = `user_name=${encodeURIComponent(targetUser.name)}; path=/; max-age=86400; SameSite=Lax`;
+      }
     }
 
     const redirectUrl = this.getRoleDashboard(resolvedRole);
@@ -288,6 +298,7 @@ export const authService = {
       document.cookie = "user_npk=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "user_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "demo_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "user_name=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     }
   },
 
