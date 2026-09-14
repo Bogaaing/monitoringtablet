@@ -236,7 +236,7 @@ export default function ReportsPage() {
   const approvalSignerName =
     currentUser?.role === "manager" && currentUser?.name
       ? currentUser.name
-      : "Anggriani Setiawan Novi";
+      : "Ready Dono Hastawan";
 
   return (
     <div className="space-y-8 print:space-y-0">
