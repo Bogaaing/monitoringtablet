@@ -266,8 +266,80 @@ export const tabletsService = {
   },
 
   async getTabletByQr(qrCode: string): Promise<Tablet | null> {
-    const res = await this.getTablets({ search: qrCode, limit: 1 });
-    return res.data.find((t) => t.qr_code.toLowerCase() === qrCode.toLowerCase()) || null;
+    if (!qrCode) return null;
+    const cleanQr = qrCode.trim();
+    if (!cleanQr) return null;
+
+    try {
+      const supabase = createClient() as any;
+
+      // 1. Direct case-insensitive exact match on qr_code
+      const { data, error } = await supabase
+        .from("tablets")
+        .select("*, location:locations(*)")
+        .is("deleted_at", null)
+        .ilike("qr_code", cleanQr)
+        .maybeSingle();
+
+      if (!error && data) return data as unknown as Tablet;
+
+      // 2. Tolerance for whitespace formatting (e.g. "TB11" vs "TB 11")
+      const matchTb = cleanQr.match(/^TB\s*(\d+)$/i);
+      if (matchTb) {
+        const altQr = cleanQr.includes(" ") ? `TB${matchTb[1]}` : `TB ${matchTb[1]}`;
+        const { data: altData, error: altErr } = await supabase
+          .from("tablets")
+          .select("*, location:locations(*)")
+          .is("deleted_at", null)
+          .ilike("qr_code", altQr)
+          .maybeSingle();
+
+        if (!altErr && altData) return altData as unknown as Tablet;
+      }
+
+      // 3. Fallback: match by serial_number
+      const { data: snData, error: snErr } = await supabase
+        .from("tablets")
+        .select("*, location:locations(*)")
+        .is("deleted_at", null)
+        .ilike("serial_number", cleanQr)
+        .maybeSingle();
+
+      if (!snErr && snData) return snData as unknown as Tablet;
+
+      // 4. Fallback: match by UUID id
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanQr);
+      if (isUuid) {
+        const { data: idData, error: idErr } = await supabase
+          .from("tablets")
+          .select("*, location:locations(*)")
+          .is("deleted_at", null)
+          .eq("id", cleanQr)
+          .maybeSingle();
+
+        if (!idErr && idData) return idData as unknown as Tablet;
+      }
+    } catch (e) {
+      console.error("getTabletByQr error:", e);
+    }
+
+    if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const adminSupabase = createAdminClient() as any;
+        const { data, error } = await adminSupabase
+          .from("tablets")
+          .select("*, location:locations(*)")
+          .is("deleted_at", null)
+          .ilike("qr_code", cleanQr)
+          .maybeSingle();
+
+        if (!error && data) return data as unknown as Tablet;
+      } catch (adminErr) {
+        console.error("getTabletByQr admin error:", adminErr);
+      }
+    }
+
+    return null;
   },
 
   async bulkImportTablets(
