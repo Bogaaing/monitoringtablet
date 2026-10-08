@@ -72,7 +72,13 @@ export default function PicScanPage() {
 
       // 2. Strict Location Authorization Check for PIC
       const user = currentUser || (await authService.getCurrentProfile());
-      if (user?.role === "pic" && user.location_id) {
+      if (user?.role === "pic") {
+        if (!user.location_id) {
+          setErrorMessage("Akun PIC Anda belum ditugaskan ke lokasi tertentu oleh Administrator.");
+          setStep("scan");
+          setLoading(false);
+          return;
+        }
         if (tablet.location_id && tablet.location_id !== user.location_id) {
           setStep("unauthorized_location");
           setLoading(false);

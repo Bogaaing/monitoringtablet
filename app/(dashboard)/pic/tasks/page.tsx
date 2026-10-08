@@ -151,6 +151,13 @@ export default function PicTasksPage() {
     if (!currentUser) return;
     setLoading(true);
     try {
+      // If user is a PIC but has no location assigned, do not load tablets from all locations
+      if (currentUser.role === "pic" && !currentUser.location_id) {
+        setTasks([]);
+        setLoading(false);
+        return;
+      }
+
       const locationId = currentUser.location_id || undefined;
 
       // Load tablets strictly at PIC's assigned location and ACTIVE status
@@ -273,6 +280,19 @@ export default function PicTasksPage() {
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
+
+      {/* ── Unassigned Location Alert Banner ── */}
+      {currentUser?.role === "pic" && !currentUser.location_id && (
+        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 flex items-start gap-2.5 text-amber-800 dark:text-amber-200 text-xs">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-bold block">Lokasi Belum Ditugaskan</span>
+            <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">
+              Akun PIC Anda belum ditugaskan ke lokasi tertentu oleh Administrator. Silakan hubungi Admin untuk menetapkan lokasi penugasan Anda agar tablet tugas dapat ditampilkan.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── KPI Summary Micro Cards ── */}
       <div className="grid grid-cols-4 gap-2">

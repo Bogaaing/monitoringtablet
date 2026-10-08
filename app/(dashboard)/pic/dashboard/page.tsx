@@ -46,6 +46,14 @@ export default function PicDashboardPage() {
         const userLocId = u?.location_id || u?.location?.id;
         const userLocName = u?.location?.name?.trim().toLowerCase();
 
+        // If user is a PIC but has no assigned location, do not query all tablets across factory
+        if (u?.role === "pic" && !userLocId) {
+          setAssignedTabletsCount(0);
+          setInspectionsList([]);
+          setLoading(false);
+          return;
+        }
+
         const tabRes = await tabletsService.getTablets({
           locationId: userLocId || undefined,
           status: "active",
@@ -81,7 +89,7 @@ export default function PicDashboardPage() {
   }, []);
 
   // Compute Live Statistics
-  const totalTablets = assignedTabletsCount > 0 ? assignedTabletsCount : Math.max(inspectionsList.length, 5);
+  const totalTablets = assignedTabletsCount;
   const completedCount = inspectionsList.filter((i) => i.status === "approved" || i.status === "completed").length;
   const pendingCount = inspectionsList.filter((i) => i.status === "pending" || i.status === "submitted").length;
   const needRepairCount = inspectionsList.filter((i) => i.status === "rejected").length;

@@ -370,7 +370,12 @@ export function QRScanner({ onScanSuccess, currentUser }: QRScannerProps) {
         }
 
         // Strict Location Authorization Check for PIC
-        if (currentUser?.role === "pic" && currentUser.location_id) {
+        if (currentUser?.role === "pic") {
+          if (!currentUser.location_id) {
+            setErrorMessage("Akun PIC Anda belum ditugaskan ke lokasi tertentu oleh Administrator.");
+            setScanStatus("error");
+            return;
+          }
           if (tablet.location_id && tablet.location_id !== currentUser.location_id) {
             const tabletLocName = tablet.location?.name || "lokasi lain";
             const myLocName = currentUser.location?.name || "lokasi penugasan Anda";
