@@ -57,7 +57,7 @@ export default async function DashboardLayout({
         } else {
           currentUser = {
             id: user.id,
-            npk: user.user_metadata?.npk || (demoRole === "admin" ? "11130595" : demoRole === "manager" ? "22240696" : "33350797"),
+            npk: user.user_metadata?.npk || (demoRole === "admin" ? "11130000" : demoRole === "manager" ? "22240696" : "33350797"),
             name: user.user_metadata?.name || user.email.split("@")[0],
             email: user.email,
             role: (user.user_metadata?.role as Role) || demoRole,
@@ -73,10 +73,14 @@ export default async function DashboardLayout({
 
   // Enforce correct role mapping based on NPK
   if (currentUser) {
-    if (currentUser.npk === "11130595") {
+    if (currentUser.npk === "11130000") {
       currentUser.role = "admin";
       currentUser.name = currentUser.name || "Super Admin";
-      currentUser.department = "IT & Admin";
+      currentUser.department = currentUser.department || "Operations";
+    } else if (currentUser.npk === "11130595") {
+      currentUser.role = "pic";
+      currentUser.name = currentUser.name || "Ahmad asep suhendi";
+      currentUser.department = currentUser.department || "Operations";
     } else if (currentUser.npk === "22240696") {
       currentUser.role = "manager";
     } else if (currentUser.npk === "33350797") {
@@ -89,8 +93,11 @@ export default async function DashboardLayout({
     let resolvedRole: Role = demoRole;
     let fallbackNpk = userNpk;
 
-    if (userNpk === "11130595") {
+    if (userNpk === "11130000") {
       resolvedRole = "admin";
+      fallbackNpk = "11130000";
+    } else if (userNpk === "11130595") {
+      resolvedRole = "pic";
       fallbackNpk = "11130595";
     } else if (userNpk === "22240696") {
       resolvedRole = "manager";
@@ -99,13 +106,15 @@ export default async function DashboardLayout({
       resolvedRole = "pic";
       fallbackNpk = "33350797";
     } else {
-      fallbackNpk = userNpk || (demoRole === "admin" ? "11130595" : demoRole === "manager" ? "22240696" : "33350797");
+      fallbackNpk = userNpk || (demoRole === "admin" ? "11130000" : demoRole === "manager" ? "22240696" : "33350797");
     }
 
     const formattedName = resolvedRole === "admin"
       ? "Super Admin"
       : resolvedRole === "manager"
       ? "Approval Operations"
+      : fallbackNpk === "11130595"
+      ? "Ahmad asep suhendi"
       : "PIC (Kepala Regu)";
 
     currentUser = {

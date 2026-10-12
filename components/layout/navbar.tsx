@@ -84,7 +84,7 @@ export function Navbar({
               {renderRoleBadge(user?.role)}
             </div>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono font-medium mt-0.5">
-              NPK: {user?.npk || "11130595"}
+              NPK: {user?.npk || "11130000"}
             </span>
           </div>
         </div>

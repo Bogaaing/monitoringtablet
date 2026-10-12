@@ -473,7 +473,7 @@ export default function AdminUsersPage() {
                   type="text"
                   inputMode="numeric"
                   maxLength={8}
-                  placeholder="Contoh: 11130595"
+                  placeholder="Contoh: 11130000"
                   value={formData.npk}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, "").slice(0, 8);
@@ -645,7 +645,7 @@ export default function AdminUsersPage() {
               </label>
               <textarea
                 rows={6}
-                placeholder={`11130595, Super Admin, admin, IT, admin123\n22240696, Approval Ops, manager, Operations, manager123\n33350797, PIC Penguji, pic, Inspection, pic123`}
+                placeholder={`11130000, Super Admin, admin, IT, admin123\n22240696, Approval Ops, manager, Operations, manager123\n33350797, PIC Penguji, pic, Inspection, pic123`}
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 className="w-full p-3 font-mono text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"

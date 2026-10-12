@@ -50,9 +50,12 @@ export async function updateSession(request: NextRequest) {
     const userNpkCookie = request.cookies.get("user_npk")?.value;
 
     // Direct NPK Role Mapping Check
-    if (userNpkCookie === "11130595") {
+    if (userNpkCookie === "11130000") {
       isAuthenticated = true;
       userRole = "admin";
+    } else if (userNpkCookie === "11130595") {
+      isAuthenticated = true;
+      userRole = "pic";
     } else if (userNpkCookie === "22240696") {
       isAuthenticated = true;
       userRole = "manager";
@@ -108,8 +111,10 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    if (userNpkCookie === "11130595") {
+    if (userNpkCookie === "11130000") {
       userRole = "admin";
+    } else if (userNpkCookie === "11130595") {
+      userRole = "pic";
     }
 
     const getRoleDashboard = (role: string) => {

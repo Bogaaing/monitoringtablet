@@ -114,11 +114,12 @@ export const authService = {
       const roleMatch = document.cookie.match(/(?:^|; )demo_role=([^;]*)/);
       let role = (roleMatch ? roleMatch[1] : "admin") as Role;
 
-      if (activeNpk === "11130595") role = "admin";
+      if (activeNpk === "11130000") role = "admin";
+      else if (activeNpk === "11130595") role = "pic";
       else if (activeNpk === "22240696") role = "manager";
       else if (activeNpk === "33350797") role = "pic";
 
-      const fallbackNpk = activeNpk || (role === "admin" ? "11130595" : role === "manager" ? "22240696" : "33350797");
+      const fallbackNpk = activeNpk || (role === "admin" ? "11130000" : role === "manager" ? "22240696" : "33350797");
       const fallbackEmail = `${fallbackNpk}@tabmonitor.my.id`;
 
       const nameCookieMatch = document.cookie.match(/(?:^|; )user_name=([^;]*)/);
@@ -126,7 +127,13 @@ export const authService = {
 
       const fallbackName =
         sessionUserName ||
-        (role === "admin" ? "Super Admin" : role === "manager" ? "Approval Operations" : "PIC Penguji");
+        (role === "admin"
+          ? "Super Admin"
+          : role === "manager"
+          ? "Approval Operations"
+          : fallbackNpk === "11130595"
+          ? "Ahmad asep suhendi"
+          : "PIC Penguji");
 
       return {
         id: `user-${role}-session`,
@@ -187,23 +194,41 @@ export const authService = {
     }
 
     // Explicit Role Enforcement for Demo NPKs
-    if (cleanNpk === "11130595") {
+    if (cleanNpk === "11130000") {
       if (targetUser) {
         targetUser.role = "admin";
         targetUser.name = targetUser.name || "Super Admin";
       } else {
         targetUser = {
-          id: "demo-admin-id",
-          npk: "11130595",
+          id: "10000000-0000-0000-0000-000000000001",
+          npk: "11130000",
           name: "Super Admin",
-          email: "11130595@tabmonitor.my.id",
+          email: "admin@monitoring.com",
           role: "admin",
           department: "IT & Admin",
           status: "active",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        internalEmail = "11130595@tabmonitor.my.id";
+        internalEmail = "admin@monitoring.com";
+      }
+    } else if (cleanNpk === "11130595") {
+      if (targetUser) {
+        targetUser.role = "pic";
+        targetUser.name = targetUser.name || "Ahmad asep suhendi";
+      } else {
+        targetUser = {
+          id: "a0796f74-5c0d-4a4d-b2ac-cf04f7caff7a",
+          npk: "11130595",
+          name: "Ahmad asep suhendi",
+          email: "asep@monitoring.com",
+          role: "pic",
+          department: "Operations",
+          status: "active",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        internalEmail = "asep@monitoring.com";
       }
     } else if (cleanNpk === "22240696") {
       if (targetUser) {
@@ -259,8 +284,10 @@ export const authService = {
     } catch (err: any) {}
 
     const resolvedRole: Role =
-      cleanNpk === "11130595"
+      cleanNpk === "11130000"
         ? "admin"
+        : cleanNpk === "11130595"
+        ? "pic"
         : cleanNpk === "22240696"
         ? "manager"
         : cleanNpk === "33350797"
