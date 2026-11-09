@@ -28,6 +28,8 @@ import {
   Radio,
   Maximize2,
   ShieldCheck,
+  Search,
+  Filter,
 } from "lucide-react";
 
 export default function LiveMonitoringPage() {
@@ -43,6 +45,10 @@ export default function LiveMonitoringPage() {
   const [locationProgress, setLocationProgress] = useState<
     { id: string; name: string; total: number; completed: number; pending: number; rate: number }[]
   >([]);
+
+  // Location Progress Filter & Search
+  const [locationFilter, setLocationFilter] = useState<"all" | "uninspected" | "incomplete" | "completed">("all");
+  const [searchLocation, setSearchLocation] = useState<string>("");
 
   // Selected Inspection Modal & Lightbox
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
@@ -140,6 +146,36 @@ export default function LiveMonitoringPage() {
   const damagedTablets = tablets.filter((t) => t.status === "maintenance" || t.status === "inactive");
   const lowBatteryInspections = inspections.filter((i) => (i.battery_pct || 100) < 20);
   const totalAlerts = damagedTablets.length + lowBatteryInspections.length;
+
+  // Location counts for filter pills
+  const locationCounts = {
+    all: locationProgress.length,
+    uninspected: locationProgress.filter((l) => l.total > 0 && l.completed === 0).length,
+    incomplete: locationProgress.filter((l) => l.total > 0 && l.completed < l.total).length,
+    completed: locationProgress.filter((l) => l.total > 0 && l.completed >= l.total).length,
+  };
+
+  // Filtered operational locations
+  const filteredLocationProgress = locationProgress.filter((loc) => {
+    // Search by location name
+    if (searchLocation.trim()) {
+      if (!loc.name.toLowerCase().includes(searchLocation.trim().toLowerCase())) {
+        return false;
+      }
+    }
+
+    // Status filter
+    if (locationFilter === "uninspected") {
+      return loc.total > 0 && loc.completed === 0;
+    }
+    if (locationFilter === "incomplete") {
+      return loc.total > 0 && loc.completed < loc.total;
+    }
+    if (locationFilter === "completed") {
+      return loc.total > 0 && loc.completed >= loc.total;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-8">
@@ -239,44 +275,262 @@ export default function LiveMonitoringPage() {
         />
       </div>
 
-      {/* Location Operational Progress Grid */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            <span>Progres Operasional per Lokasi Area</span>
-          </h3>
-          <span className="text-xs text-slate-500">{locationProgress.length} Lokasi Operasional</span>
+      {/* Location Operational Progress Section with Filter */}
+      <div className="space-y-4">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <span>Progres Operasional per Lokasi Area</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Monitoring persentase keterisian inspeksi tablet periode berjalan di tiap area kerja.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              Menampilkan {filteredLocationProgress.length} dari {locationProgress.length} Lokasi
+            </span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {locationProgress.map((loc) => (
-            <GlassCard key={loc.id} className="p-5 space-y-3" glowColor="indigo">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">{loc.name}</h4>
-                  <span className="text-xs text-slate-500 font-mono">{loc.total} Unit Tablet</span>
-                </div>
-                <Badge variant={loc.rate === 100 ? "success" : "warning"} className="text-xs font-black">
-                  {loc.rate}%
-                </Badge>
-              </div>
+        {/* Filter Toolbar (Status Pills & Search) */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+          {/* Status Filter Buttons */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* 1. Semua Lokasi */}
+            <button
+              onClick={() => setLocationFilter("all")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                locationFilter === "all"
+                  ? "bg-slate-900 text-white dark:bg-indigo-600 shadow-xs"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+              }`}
+            >
+              <span>Semua Lokasi</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                  locationFilter === "all"
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                {locationCounts.all}
+              </span>
+            </button>
 
-              {/* Solid Progress Bar */}
-              <div className="space-y-1">
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
-                  <div
-                    className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${loc.rate}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[11px] font-semibold text-slate-500">
-                  <span className="text-emerald-600 dark:text-emerald-400">{loc.completed} Selesai</span>
-                  <span className="text-amber-600 dark:text-amber-400">{loc.pending} Belum</span>
-                </div>
+            {/* 2. Belum Inspeksi (0%) */}
+            <button
+              onClick={() => setLocationFilter("uninspected")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                locationFilter === "uninspected"
+                  ? "bg-rose-600 text-white shadow-xs font-bold"
+                  : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/60 border border-rose-200/80 dark:border-rose-900/50"
+              }`}
+              title="Tampilkan lokasi yang sama sekali belum melakukan inspeksi (0%)"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+              <span>Belum Inspeksi (0%)</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  locationFilter === "uninspected"
+                    ? "bg-white/25 text-white"
+                    : "bg-rose-200/80 dark:bg-rose-900/70 text-rose-800 dark:text-rose-200"
+                }`}
+              >
+                {locationCounts.uninspected}
+              </span>
+            </button>
+
+            {/* 3. Belum Lengkap (< 100%) */}
+            <button
+              onClick={() => setLocationFilter("incomplete")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                locationFilter === "incomplete"
+                  ? "bg-amber-600 text-white shadow-xs font-bold"
+                  : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/60 border border-amber-200/80 dark:border-amber-900/50"
+              }`}
+              title="Tampilkan lokasi yang belum 100% lengkap (ada tablet pending)"
+            >
+              <Clock className="w-3.5 h-3.5 text-amber-500" />
+              <span>Belum Lengkap (&lt; 100%)</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  locationFilter === "incomplete"
+                    ? "bg-white/25 text-white"
+                    : "bg-amber-200/80 dark:bg-amber-900/70 text-amber-800 dark:text-amber-200"
+                }`}
+              >
+                {locationCounts.incomplete}
+              </span>
+            </button>
+
+            {/* 4. Selesai (100%) */}
+            <button
+              onClick={() => setLocationFilter("completed")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                locationFilter === "completed"
+                  ? "bg-emerald-600 text-white shadow-xs font-bold"
+                  : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-900/50"
+              }`}
+              title="Tampilkan lokasi yang seluruh tabletnya sudah selesai diinspeksi (100%)"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Selesai (100%)</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  locationFilter === "completed"
+                    ? "bg-white/25 text-white"
+                    : "bg-emerald-200/80 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200"
+                }`}
+              >
+                {locationCounts.completed}
+              </span>
+            </button>
+          </div>
+
+          {/* Search Location Input */}
+          <div className="relative w-full md:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchLocation}
+              onChange={(e) => setSearchLocation(e.target.value)}
+              placeholder="Cari nama area lokasi..."
+              className="w-full text-xs pl-8 pr-7 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder:text-slate-400"
+            />
+            {searchLocation && (
+              <button
+                onClick={() => setSearchLocation("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                title="Hapus pencarian"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Location Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {filteredLocationProgress.length === 0 ? (
+            <div className="col-span-full p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-2">
+              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400 mb-2">
+                <MapPin className="w-5 h-5" />
               </div>
-            </GlassCard>
-          ))}
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                {locationFilter === "uninspected"
+                  ? "Bagus sekali! Tidak ada lokasi yang belum melakukan inspeksi (0%)."
+                  : locationFilter === "incomplete"
+                  ? "Seluruh lokasi operasional telah menyelesaikan 100% inspeksi!"
+                  : "Tidak ada lokasi yang cocok dengan filter atau kata kunci pencarian."}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Ubah filter status atau bersihkan kotak pencarian di atas untuk melihat data lokasi lainnya.
+              </p>
+              <button
+                onClick={() => {
+                  setLocationFilter("all");
+                  setSearchLocation("");
+                }}
+                className="mt-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline inline-block"
+              >
+                Reset Semua Filter Lokasi
+              </button>
+            </div>
+          ) : (
+            filteredLocationProgress.map((loc) => {
+              const isUninspected = loc.total > 0 && loc.completed === 0;
+              const isCompleted = loc.total > 0 && loc.completed >= loc.total;
+              const isInProgress = loc.completed > 0 && loc.completed < loc.total;
+              const hasNoTablets = loc.total === 0;
+
+              let glowColor: "indigo" | "rose" | "amber" | "emerald" = "indigo";
+              if (isUninspected) glowColor = "rose";
+              else if (isInProgress) glowColor = "amber";
+              else if (isCompleted) glowColor = "emerald";
+
+              return (
+                <GlassCard
+                  key={loc.id}
+                  className={`p-5 space-y-3 transition-all ${
+                    isUninspected
+                      ? "border-rose-200/90 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/15"
+                      : isCompleted
+                      ? "border-emerald-200/60 dark:border-emerald-900/40"
+                      : ""
+                  }`}
+                  glowColor={glowColor}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate" title={loc.name}>
+                        {loc.name}
+                      </h4>
+                      <span className="text-xs text-slate-500 font-mono">
+                        {hasNoTablets ? "0 Unit Tablet" : `${loc.total} Unit Tablet`}
+                      </span>
+                    </div>
+
+                    {/* Status Badge */}
+                    {hasNoTablets ? (
+                      <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-200 shrink-0">
+                        Kosong
+                      </Badge>
+                    ) : isUninspected ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-200 dark:border-rose-900 shrink-0">
+                        <AlertTriangle className="w-3 h-3 text-rose-500" />
+                        0% Belum
+                      </span>
+                    ) : isCompleted ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 shrink-0">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                        100% Selesai
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-900 shrink-0">
+                        <Clock className="w-3 h-3 text-amber-500" />
+                        {loc.rate}%
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Progress Bar & Counter */}
+                  <div className="space-y-1.5">
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isCompleted
+                            ? "bg-emerald-500"
+                            : isUninspected
+                            ? "bg-rose-400"
+                            : "bg-amber-500"
+                        }`}
+                        style={{ width: `${loc.rate}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[11px] font-semibold">
+                      <span className={loc.completed > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}>
+                        {loc.completed} Selesai
+                      </span>
+                      <span
+                        className={
+                          isUninspected
+                            ? "text-rose-600 dark:text-rose-400 font-bold"
+                            : loc.pending > 0
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-slate-400"
+                        }
+                      >
+                        {loc.pending} Belum
+                      </span>
+                    </div>
+                  </div>
+                </GlassCard>
+              );
+            })
+          )}
         </div>
       </div>
 

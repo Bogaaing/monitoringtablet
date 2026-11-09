@@ -115,3 +115,44 @@ export interface PaginatedResult<T> {
   page: number;
   totalPages: number;
 }
+
+export interface MappedUserInfo {
+  id: string;
+  npk: string | null;
+  name: string;
+  email?: string | null;
+  role?: Role | null;
+  department?: string | null;
+}
+
+export interface UserTabletMappingItem {
+  id: string;
+  tablet_id: string;
+  qr_code: string;
+  serial_number: string;
+  brand: string;
+  model: string;
+  tablet_status: TabletStatus;
+  location_id: string | null;
+  location_name: string | null;
+  location_code: string | null;
+  users: MappedUserInfo[];
+  user_display_text: string;
+  user_id: string | null;
+  user_npk: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  user_role: Role | null;
+  user_department: string | null;
+  has_user: boolean;
+  has_location: boolean;
+}
+
+export interface UserTabletMappingSummary {
+  totalTablets: number;
+  totalMappedUsers: number;
+  totalMappedLocations: number;
+  unassignedUserTablets: number;
+  unassignedLocationTablets: number;
+}
+
